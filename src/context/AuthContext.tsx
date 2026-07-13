@@ -92,31 +92,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else if (localProfileStr) {
             profile = JSON.parse(localProfileStr);
           } else {
-            // Determine role by email
-            const email = firebaseUser.email || "";
-            let role: UserRole = "siswa";
-            if (email.includes("guru") || email === "sergiusnono80@guru.smk.belajar.id") {
-              role = "pembimbing";
-            } else if (email.includes("admin") || email === "wasosergio@gmail.com") {
-              role = "admin";
-            }
+            // GANTI BAGIAN PENENTUAN ROLE INI:
+const email = firebaseUser.email || "";
+let role: UserRole = "siswa"; // Default
 
-            profile = {
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName || "Pengguna PKL",
-              email: email,
-              role: role,
-              photoURL: firebaseUser.photoURL || undefined,
-              createdAt: new Date().toISOString(),
-            };
+// LOGIKA BARU YANG LEBIH CERDAS
+if (email.includes("guru") || email === "maria.petronela.yohana.meo@smksanjaya.sch.id") {
+  role = "pembimbing";
+} else if (email.includes("admin") || email === "wasosergio@gmail.com") {
+  role = "admin";
+} else if (email === "mas.nur@smksanjaya.sch.id") { // Tambahkan kondisi untuk Industri
+  role = "industri";
+},
 
             // Seed with fields if it's our target guru
-            if (email === "sergiusnono80@guru.smk.belajar.id") {
-              profile.name = "Drs. Sergius Nono";
+            if (email === "maria.petronela.yohana.meo@smksanjaya.sch.id") {
+              profile.name = "Maria Petronela Yohana Meo, S.Kom";
             } else if (role === "siswa") {
               profile.nisn = "0081234567";
               profile.kelas = "XII TKJ";
-              profile.tempatPkl = "Dinas Kominfo Ngada";
+              profile.tempatPkl = "CV.EMANUEL";
             }
           }
 
