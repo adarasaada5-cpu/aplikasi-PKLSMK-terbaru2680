@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/ai/query",
+      "destination": "/api/ai/query"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
