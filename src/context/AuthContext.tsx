@@ -97,12 +97,23 @@ const email = firebaseUser.email || "";
 let role: UserRole = "siswa"; // Default
 
 // LOGIKA BARU YANG LEBIH CERDAS
-if (email.includes("guru") || email === "maria.petronela.yohana.meo@smksanjaya.sch.id") {
-  role = "pembimbing";
-} else if (email.includes("admin") || email === "wasosergio@gmail.com") {
+// 1. Cek Admin
+if (email.includes("admin") || email === "wasosergio@gmail.com") {
   role = "admin";
-} else if (email === "mas.nur@smksanjaya.sch.id") { // Tambahkan kondisi untuk Industri
+} 
+// 2. Cek Pembimbing (Guru)
+else if (email.includes("guru") || email.includes("@smksanjaya.sch.id")) { 
+  // Sesuaikan domain email guru Anda
+  role = "pembimbing";
+} 
+// 3. Cek Industri
+else if (email.includes("mitra") || email === "mas.nur@smksanjaya.sch.id") {
   role = "industri";
+}
+// 4. Default ke siswa
+else {
+  role = "siswa";
+}
 },
 
             // Seed with fields if it's our target guru
