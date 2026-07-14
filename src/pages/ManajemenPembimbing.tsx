@@ -331,15 +331,29 @@ export const ManajemenPembimbing: React.FC = () => {
 
         if (activeTab === "sekolah") {
           const list: typeof parsedPembimbing = [];
+          
+          let nameIdx = 0;
+          let emailIdx = 1;
+          let passwordIdx = 2;
+
+          if (isHeader) {
+            firstRow.forEach((cell, idx) => {
+              const val = String(cell || "").toLowerCase();
+              if (val.includes("nama") || val.includes("pembimbing") || val.includes("guru")) nameIdx = idx;
+              else if (val.includes("email") || val.includes("surel")) emailIdx = idx;
+              else if (val.includes("password") || val.includes("sandi")) passwordIdx = idx;
+            });
+          }
+
           for (let i = startRow; i < rawRows.length; i++) {
             const row = rawRows[i];
             if (!row || row.length === 0) continue;
 
-            const name = row[0] ? String(row[0]).trim() : "";
+            const name = row[nameIdx] ? String(row[nameIdx]).trim() : "";
             if (!name) continue;
 
-            const email = row[1] ? String(row[1]).trim() : `${name.toLowerCase().replace(/\s+/g, "")}@smksanjaya.sch.id`;
-            const password = row[2] ? String(row[2]).trim() : "PembimbingSanjaya123";
+            const email = row[emailIdx] ? String(row[emailIdx]).trim() : `${name.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/\s+/g, "")}@smksanjaya.sch.id`;
+            const password = row[passwordIdx] ? String(row[passwordIdx]).trim() : "PembimbingSanjaya123";
 
             list.push({ name, email, password });
           }
@@ -351,16 +365,32 @@ export const ManajemenPembimbing: React.FC = () => {
           }
         } else {
           const list: typeof parsedIndustri = [];
+          
+          let nameIdx = 0;
+          let emailIdx = 1;
+          let passwordIdx = 2;
+          let dudiIdx = 3;
+
+          if (isHeader) {
+            firstRow.forEach((cell, idx) => {
+              const val = String(cell || "").toLowerCase();
+              if (val.includes("nama") || val.includes("pimpinan") || val.includes("pemilik") || val.includes("kontak")) nameIdx = idx;
+              else if (val.includes("email") || val.includes("surel")) emailIdx = idx;
+              else if (val.includes("password") || val.includes("sandi")) passwordIdx = idx;
+              else if (val.includes("mitra") || val.includes("dudi") || val.includes("tempat") || val.includes("perusahaan")) dudiIdx = idx;
+            });
+          }
+
           for (let i = startRow; i < rawRows.length; i++) {
             const row = rawRows[i];
             if (!row || row.length === 0) continue;
 
-            const name = row[0] ? String(row[0]).trim() : "";
+            const name = row[nameIdx] ? String(row[nameIdx]).trim() : "";
             if (!name) continue;
 
-            const email = row[1] ? String(row[1]).trim() : `${name.toLowerCase().replace(/\s+/g, "")}@mitrapkl.com`;
-            const password = row[2] ? String(row[2]).trim() : "IndustriSanjaya123";
-            const rawPlaceName = row[3] ? String(row[3]).trim() : "";
+            const email = row[emailIdx] ? String(row[emailIdx]).trim() : `${name.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/\s+/g, "")}@mitrapkl.com`;
+            const password = row[passwordIdx] ? String(row[passwordIdx]).trim() : "IndustriSanjaya123";
+            const rawPlaceName = row[dudiIdx] ? String(row[dudiIdx]).trim() : "";
 
             let tempatPklName = "";
             let tempatPklId: string | undefined = undefined;

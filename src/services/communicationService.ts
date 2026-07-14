@@ -329,16 +329,17 @@ export const communicationService = {
       const path = "messages";
       const q = query(
         collection(db, path),
-        where("roomId", "==", roomId),
-        orderBy("createdAt", "asc")
+        where("roomId", "==", roomId)
       );
       return onSnapshot(
         q,
         (snap) => {
           const list: ChatMessage[] = [];
           snap.forEach((docSnap) => {
-            list.push({ messageId: docSnap.id, ...docSnap.data() } as ChatMessage);
+            list.push({ messageId: docSnap.id, ...(docSnap.data() as any) } as ChatMessage);
           });
+          // Sort in-memory to avoid index requirement
+          list.sort((a, b) => new Date(a.createdAt || "").getTime() - new Date(b.createdAt || "").getTime());
           callback(list);
         },
         (error) => {
@@ -523,8 +524,7 @@ export const communicationService = {
       try {
         const q = query(
           collection(db, path),
-          where("receiverId", "==", userId),
-          orderBy("createdAt", "desc")
+          where("receiverId", "==", userId)
         );
         const snap = await getDocs(q);
         const msgs: InboxMessage[] = [];
@@ -535,8 +535,7 @@ export const communicationService = {
         // Also get sent messages to show in Sent folder
         const qSent = query(
           collection(db, path),
-          where("senderId", "==", userId),
-          orderBy("createdAt", "desc")
+          where("senderId", "==", userId)
         );
         const snapSent = await getDocs(qSent);
         snapSent.forEach((docSnap) => {

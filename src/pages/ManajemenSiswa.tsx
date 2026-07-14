@@ -333,6 +333,9 @@ export const ManajemenSiswa: React.FC = () => {
             noHp: string;
             alamat: string;
             kuota: number;
+            pemilikName?: string;
+            email?: string;
+            password?: string;
           } | null = null;
 
           // Find column indices based on header names or use defaults matching the exact columns in the image:
@@ -361,13 +364,19 @@ export const ManajemenSiswa: React.FC = () => {
 
             // If a DUDI is specified in this row, we update currentDUDI
             if (rowDudi) {
+              const cleanPemilikName = rowPemilik || "Pimpinan";
+              const generatedEmail = `${cleanPemilikName.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/\s+/g, "")}@mitrapkl.com`;
+              
               currentDUDI = {
                 nama: rowDudi,
                 // If phone number is specified, append it to pimpinan info to preserve it
-                pimpinan: rowHp ? `${rowPemilik || "Pimpinan"} (Hub: ${rowHp})` : (rowPemilik || "Pimpinan"),
+                pimpinan: rowHp ? `${cleanPemilikName} (Hub: ${rowHp})` : cleanPemilikName,
                 noHp: rowHp,
                 alamat: rowAlamat || "Alamat belum ditentukan",
-                kuota: rowKuota || 2
+                kuota: rowKuota || 2,
+                pemilikName: cleanPemilikName,
+                email: generatedEmail,
+                password: "IndustriSanjaya123"
               };
               const normalized = rowDudi.toLowerCase().trim();
               if (!seenDudis.has(normalized)) {
@@ -390,7 +399,8 @@ export const ManajemenSiswa: React.FC = () => {
                 kelas: studentClass,
                 isUnified: true,
                 dudiInfo: currentDUDI ? { ...currentDUDI } : null,
-                tempatPkl: dudiName
+                tempatPkl: dudiName,
+                password: "SiswaSanjaya123"
               });
             }
           }
@@ -398,25 +408,40 @@ export const ManajemenSiswa: React.FC = () => {
           // Standard simple student list format
           const isHeader = firstRow && firstRow.some(cell => {
             const val = String(cell || "").toLowerCase();
-            return val.includes("nama") || val.includes("email") || val.includes("nisn") || val.includes("kelas");
+            return val.includes("nama") || val.includes("email") || val.includes("nisn") || val.includes("kelas") || val.includes("password") || val.includes("sandi");
           });
+
+          let nameIdx = 0;
+          let emailIdx = 1;
+          let nisnIdx = 2;
+          let kelasIdx = 3;
+          let passwordIdx = -1;
 
           if (isHeader) {
             startRow = 1;
+            firstRow.forEach((cell, idx) => {
+              const val = String(cell || "").toLowerCase();
+              if (val.includes("nama") || val.includes("peserta")) nameIdx = idx;
+              else if (val.includes("email")) emailIdx = idx;
+              else if (val.includes("nisn") || val.includes("induk")) nisnIdx = idx;
+              else if (val.includes("kelas") || val.includes("jurus")) kelasIdx = idx;
+              else if (val.includes("password") || val.includes("sandi")) passwordIdx = idx;
+            });
           }
 
           for (let i = startRow; i < rawRows.length; i++) {
             const row = rawRows[i];
             if (!row || row.length === 0) continue;
 
-            const name = row[0] ? String(row[0]).trim() : "";
+            const name = row[nameIdx] ? String(row[nameIdx]).trim() : "";
             if (!name) continue;
 
-            const email = row[1] ? String(row[1]).trim() : `${name.toLowerCase().replace(/\s+/g, "")}@siswa.sch.id`;
-            const nisn = row[2] ? String(row[2]).trim() : `008${Math.floor(1000000 + Math.random() * 9000000)}`;
-            const kelas = row[3] ? String(row[3]).trim() : "XII TKJ";
+            const email = row[emailIdx] ? String(row[emailIdx]).trim() : `${name.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/\s+/g, "")}@siswa.sch.id`;
+            const nisn = row[nisnIdx] ? String(row[nisnIdx]).trim() : `008${Math.floor(1000000 + Math.random() * 9000000)}`;
+            const kelas = row[kelasIdx] ? String(row[kelasIdx]).trim() : "XII TKJ";
+            const password = passwordIdx !== -1 && row[passwordIdx] ? String(row[passwordIdx]).trim() : undefined;
 
-            list.push({ name, email, nisn, kelas });
+            list.push({ name, email, nisn, kelas, password });
           }
         }
 
@@ -523,8 +548,9 @@ export const ManajemenSiswa: React.FC = () => {
         // 1. Fetch latest placements so we don't duplicate existing ones
         const latestPlacements = await pklService.getTempatPkl();
         const dudiMap: { [nama: string]: TempatPkl } = {};
+        const industriToRegister: any[] = [];
 
-        // Create ALL parsed DUDIs (all 112 of them!)
+        // Create ALL parsed DUDIs
         for (const d of parsedDudis) {
           const dudiName = d.nama;
           if (!dudiMap[dudiName]) {
@@ -541,7 +567,23 @@ export const ManajemenSiswa: React.FC = () => {
               });
             }
             dudiMap[dudiName] = existing;
+
+            // Also register an industri supervisor/pimpinan user account
+            if (d.pemilikName) {
+              industriToRegister.push({
+                name: d.pemilikName,
+                email: d.email || `${d.pemilikName.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/\s+/g, "")}@mitrapkl.com`,
+                tempatPkl: d.nama,
+                tempatPklId: existing.id,
+                password: d.password || "IndustriSanjaya123"
+              });
+            }
           }
+        }
+
+        // Register accounts for Pembimbing Industri massal
+        if (industriToRegister.length > 0) {
+          await pklService.importIndustriBulk(industriToRegister);
         }
 
         // 2. Map student records with the created/resolved partner details
@@ -553,7 +595,8 @@ export const ManajemenSiswa: React.FC = () => {
             nisn: s.nisn,
             kelas: s.kelas,
             tempatPkl: resolvedDudi ? resolvedDudi.nama : "",
-            tempatPklId: resolvedDudi ? resolvedDudi.id : ""
+            tempatPklId: resolvedDudi ? resolvedDudi.id : "",
+            password: s.password || undefined
           };
         });
       } else {
@@ -563,7 +606,8 @@ export const ManajemenSiswa: React.FC = () => {
           nisn: s.nisn,
           kelas: s.kelas,
           tempatPkl: s.tempatPkl || "",
-          tempatPklId: s.tempatPklId || ""
+          tempatPklId: s.tempatPklId || "",
+          password: s.password || undefined
         }));
       }
 
@@ -1103,6 +1147,7 @@ export const ManajemenSiswa: React.FC = () => {
                               <th className="p-2.5">Email</th>
                               <th className="p-2.5">NISN</th>
                               <th className="p-2.5">Kelas</th>
+                              <th className="p-2.5">Sandi / Password</th>
                               <th className="p-2.5 pr-3">Penempatan</th>
                             </tr>
                           </thead>
@@ -1113,7 +1158,41 @@ export const ManajemenSiswa: React.FC = () => {
                                 <td className="p-2 truncate max-w-[120px]">{siswa.email}</td>
                                 <td className="p-2 font-mono">{siswa.nisn || "-"}</td>
                                 <td className="p-2 font-semibold text-gray-600 dark:text-gray-400">{siswa.kelas}</td>
+                                <td className="p-2 font-mono text-gray-500">{siswa.password || <span className="text-gray-400 italic">NISN / Bawaan</span>}</td>
                                 <td className="p-2 pr-3 truncate max-w-[120px]">{siswa.tempatPkl || <span className="text-gray-400 italic">Kosong</span>}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live DUDI Preview List */}
+                  {parsedDudis.length > 0 && parsedDudis.some(d => d.pemilikName) && (
+                    <div className="space-y-2 animate-fade-in">
+                      <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-emerald-600" /> Pratinjau Akun Mitra Industri ({parsedDudis.filter(d => d.pemilikName).length} Akun) Siap Dibuat
+                      </h4>
+                      <div className="border border-gray-150 dark:border-gray-800 rounded-xl overflow-hidden max-h-36 overflow-y-auto shadow-inner">
+                        <table className="w-full text-left border-collapse text-[11px]">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-150 dark:border-gray-800 text-gray-500 font-bold uppercase tracking-wider text-[9px]">
+                              <th className="p-2.5 pl-3">Mitra Industri</th>
+                              <th className="p-2.5">Nama Pimpinan / Penyelia</th>
+                              <th className="p-2.5">Email Log-in</th>
+                              <th className="p-2.5">Sandi / Password</th>
+                              <th className="p-2.5 pr-3">No. HP / Kontak</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
+                            {parsedDudis.filter(d => d.pemilikName).map((dudi, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30">
+                                <td className="p-2 pl-3 font-semibold">{dudi.nama}</td>
+                                <td className="p-2">{dudi.pemilikName}</td>
+                                <td className="p-2 font-mono text-emerald-600 dark:text-emerald-400">{dudi.email}</td>
+                                <td className="p-2 font-mono text-gray-500">{dudi.password || "IndustriSanjaya123"}</td>
+                                <td className="p-2 pr-3 font-mono text-gray-600 dark:text-gray-400">{dudi.noHp || "-"}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1126,7 +1205,7 @@ export const ManajemenSiswa: React.FC = () => {
                     <div className="flex items-start gap-2">
                       <Info className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
                       <span>
-                        Sistem akan mendaftarkan akun siswa baru dan men-generate password awal default menggunakan NISN masing-masing siswa (atau sandi default <strong>SiswaSanjaya123</strong> jika NISN dikosongkan).
+                        Sistem akan mendaftarkan akun siswa baru menggunakan password dari kolom <strong>Password/Sandi</strong> di Excel jika disediakan, atau men-generate password default menggunakan NISN masing-masing siswa (atau sandi default <strong>SiswaSanjaya123</strong> jika dikosongkan).
                       </span>
                     </div>
                     <div className="flex items-start gap-2">

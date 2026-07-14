@@ -362,15 +362,20 @@ export const pklService = {
     if (isFirebaseActive && db) {
       const path = "journals";
       try {
-        let q = query(collection(db, path), orderBy("createdAt", "desc"));
+        let q: any;
         if (userId) {
-          q = query(collection(db, path), where("userId", "==", userId), orderBy("createdAt", "desc"));
+          q = query(collection(db, path), where("userId", "==", userId));
+        } else {
+          q = query(collection(db, path), orderBy("createdAt", "desc"));
         }
         const querySnapshot = await getDocs(q);
         const entries: JurnalEntry[] = [];
         querySnapshot.forEach((docSnap) => {
-          entries.push({ id: docSnap.id, ...docSnap.data() } as JurnalEntry);
+          entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as JurnalEntry);
         });
+        if (userId) {
+          entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+        }
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -504,15 +509,20 @@ export const pklService = {
     if (isFirebaseActive && db) {
       const path = "attendance";
       try {
-        let q = query(collection(db, path), orderBy("createdAt", "desc"));
+        let q: any;
         if (userId) {
-          q = query(collection(db, path), where("userId", "==", userId), orderBy("createdAt", "desc"));
+          q = query(collection(db, path), where("userId", "==", userId));
+        } else {
+          q = query(collection(db, path), orderBy("createdAt", "desc"));
         }
         const querySnapshot = await getDocs(q);
         const entries: KehadiranEntry[] = [];
         querySnapshot.forEach((docSnap) => {
-          entries.push({ id: docSnap.id, ...docSnap.data() } as KehadiranEntry);
+          entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as KehadiranEntry);
         });
+        if (userId) {
+          entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+        }
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -894,7 +904,7 @@ export const pklService = {
     }
   },
 
-  async importSiswaBulk(siswaList: Omit<UserProfile, "uid" | "role" | "createdAt">[]): Promise<UserProfile[]> {
+  async importSiswaBulk(siswaList: (Omit<UserProfile, "uid" | "role" | "createdAt"> & { password?: string })[]): Promise<UserProfile[]> {
     const imported: UserProfile[] = [];
     const settings = await this.getSchoolSettings();
     const currentActiveYear = settings.tahunAjaranAktif;
@@ -914,7 +924,7 @@ export const pklService = {
 
       // ALSO check in currently imported batch to prevent duplicate creations in the same upload!
       if (!existing) {
-        existing = imported.find(u =>
+        existing = imported.find(u => 
           u.role === "siswa" && (
             (u.email && item.email && u.email.toLowerCase().trim() === item.email.toLowerCase().trim()) ||
             (u.nisn && item.nisn && u.nisn.trim() === item.nisn.trim()) ||
@@ -935,6 +945,9 @@ export const pklService = {
           tempatPklId: item.tempatPklId !== undefined ? item.tempatPklId : (existing.tempatPklId || ""),
           tahunAjaran: currentActiveYear || existing.tahunAjaran
         };
+        if (item.password) {
+          updatedSiswa.password = item.password;
+        }
         await this.saveUserProfile(updatedSiswa);
         
         // If already in imported batch, update it there, otherwise push
@@ -960,9 +973,9 @@ export const pklService = {
           tahunAjaran: currentActiveYear,
           createdAt: new Date().toISOString()
         };
-        // For bulk import, default password is set to Student Nisn or a standard one
-        const defaultPassword = item.nisn || "SiswaSanjaya123";
-        (newSiswa as any).password = defaultPassword;
+        // For bulk import, default password is set to custom password, student NISN, or a standard one
+        const defaultPassword = item.password || item.nisn || "SiswaSanjaya123";
+        newSiswa.password = defaultPassword;
 
         await this.saveUserProfile(newSiswa);
         imported.push(newSiswa);
@@ -988,7 +1001,8 @@ export const pklService = {
         const updated = {
           ...existing,
           name: item.name || existing.name,
-          email: item.email || existing.email
+          email: item.email || existing.email,
+          password: item.password || existing.password || "PembimbingSanjaya123"
         };
         await this.saveUserProfile(updated);
         imported.push(updated);
@@ -1028,7 +1042,8 @@ export const pklService = {
           name: item.name || existing.name,
           email: item.email || existing.email,
           tempatPkl: item.tempatPkl || existing.tempatPkl,
-          tempatPklId: item.tempatPklId || existing.tempatPklId
+          tempatPklId: item.tempatPklId || existing.tempatPklId,
+          password: item.password || existing.password || "IndustriSanjaya123"
         };
         await this.saveUserProfile(updated);
         imported.push(updated);
@@ -1172,15 +1187,20 @@ export const pklService = {
     if (isFirebaseActive && db) {
       const path = "assessments";
       try {
-        let q = query(collection(db, path), orderBy("createdAt", "desc"));
+        let q: any;
         if (siswaId) {
-          q = query(collection(db, path), where("siswaId", "==", siswaId), orderBy("createdAt", "desc"));
+          q = query(collection(db, path), where("siswaId", "==", siswaId));
+        } else {
+          q = query(collection(db, path), orderBy("createdAt", "desc"));
         }
         const querySnapshot = await getDocs(q);
         const entries: PenilaianPkl[] = [];
         querySnapshot.forEach((docSnap) => {
-          entries.push({ id: docSnap.id, ...docSnap.data() } as PenilaianPkl);
+          entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as PenilaianPkl);
         });
+        if (siswaId) {
+          entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+        }
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -1386,15 +1406,20 @@ export const pklService = {
     if (isFirebaseActive && db) {
       const path = "notifications";
       try {
-        let q = query(collection(db, path), orderBy("createdAt", "desc"));
+        let q: any;
         if (userId) {
-          q = query(collection(db, path), where("userId", "==", userId), orderBy("createdAt", "desc"));
+          q = query(collection(db, path), where("userId", "==", userId));
+        } else {
+          q = query(collection(db, path), orderBy("createdAt", "desc"));
         }
         const querySnapshot = await getDocs(q);
         const list: SystemNotification[] = [];
         querySnapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() } as SystemNotification);
+          list.push({ id: docSnap.id, ...(docSnap.data() as any) } as SystemNotification);
         });
+        if (userId) {
+          list.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+        }
         return list;
       } catch (error) {
         console.error("Failed to get notifications from Firestore:", error);
@@ -1470,15 +1495,21 @@ export const pklService = {
     if (isFirebaseActive && db) {
       const path = "teacher_notes";
       try {
-        let q = query(collection(db, path), where("isDeleted", "==", false), orderBy("createdAt", "desc"));
+        let q: any;
         if (userRole === "pembimbing" && userId) {
-          q = query(collection(db, path), where("isDeleted", "==", false), where("teacherId", "==", userId), orderBy("createdAt", "desc"));
+          q = query(collection(db, path), where("teacherId", "==", userId));
+        } else {
+          q = query(collection(db, path));
         }
         const querySnapshot = await getDocs(q);
-        const entries: TeacherNote[] = [];
+        let entries: TeacherNote[] = [];
         querySnapshot.forEach((docSnap) => {
-          entries.push({ id: docSnap.id, ...docSnap.data() } as TeacherNote);
+          entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as TeacherNote);
         });
+        // Filter out deleted in-memory
+        entries = entries.filter(note => note.isDeleted === false);
+        // Sort in-memory
+        entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -1604,15 +1635,21 @@ export const pklService = {
     if (isFirebaseActive && db) {
       const path = "monitorings";
       try {
-        let q = query(collection(db, path), where("isDeleted", "==", false), orderBy("createdAt", "desc"));
+        let q: any;
         if (userRole === "pembimbing" && userId) {
-          q = query(collection(db, path), where("isDeleted", "==", false), where("pembimbingId", "==", userId), orderBy("createdAt", "desc"));
+          q = query(collection(db, path), where("pembimbingId", "==", userId));
+        } else {
+          q = query(collection(db, path));
         }
         const querySnapshot = await getDocs(q);
-        const entries: MonitoringEntry[] = [];
+        let entries: MonitoringEntry[] = [];
         querySnapshot.forEach((docSnap) => {
-          entries.push({ id: docSnap.id, ...docSnap.data() } as MonitoringEntry);
+          entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as MonitoringEntry);
         });
+        // Filter out deleted in-memory
+        entries = entries.filter(mon => mon.isDeleted === false);
+        // Sort in-memory
+        entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
