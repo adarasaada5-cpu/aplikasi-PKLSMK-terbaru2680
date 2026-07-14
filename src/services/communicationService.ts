@@ -329,17 +329,16 @@ export const communicationService = {
       const path = "messages";
       const q = query(
         collection(db, path),
-        where("roomId", "==", roomId)
+        where("roomId", "==", roomId),
+        orderBy("createdAt", "asc")
       );
       return onSnapshot(
         q,
         (snap) => {
           const list: ChatMessage[] = [];
           snap.forEach((docSnap) => {
-            list.push({ messageId: docSnap.id, ...(docSnap.data() as any) } as ChatMessage);
+            list.push({ messageId: docSnap.id, ...docSnap.data() } as ChatMessage);
           });
-          // Sort in-memory to avoid index requirement
-          list.sort((a, b) => new Date(a.createdAt || "").getTime() - new Date(b.createdAt || "").getTime());
           callback(list);
         },
         (error) => {
