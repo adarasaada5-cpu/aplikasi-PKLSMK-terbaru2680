@@ -482,9 +482,9 @@ export const ManajemenSiswa: React.FC = () => {
       [1, "DINAS KOMINFO KAB. NGADA", "Daniel Kopong", "081339442710", "Ibaumuku, Bajawa, Ngada", "XII TKJ", 3, "NIKOLAUS L. A. KILA"],
       ["", "", "", "", "", "XII TKJ", "", "YOSEPH KEYS EREKE"],
       ["", "", "", "", "", "XII TKJ", "", "MARSELINO NONO"],
-      [2, "SANJAYA COMPUTER & SERVICE", "Gilbertus Mor", "081338423200", "Bong, Bajawa, Ngada", "XII RPL", 2, "MELKIADESALDINO RATO"],
-      ["", "", "", "", "", "XII RPL", "", "ROMOALDUS BELU"],
-      [3, "BAJAWA DIGITAL CREATIVE", "Yustina Soba", "081234567890", "Tanalodu, Bajawa, Ngada", "XII Multimedia", 1, "FRANSISKUS NGADA"]
+      [2, "CV SANJAYA DPIB SEJAHTERA", "Gilbertus Mor", "081338423200", "Bong, Bajawa, Ngada", "XII DPIB", 2, "MELKIADESALDINO RATO"],
+      ["", "", "", "", "", "XII DPIB", "", "ROMOALDUS BELU"],
+      [3, "SANJAYA MOTOR BAJAWA", "Yustina Soba", "081234567890", "Tanalodu, Bajawa, Ngada", "XII TSM", 1, "FRANSISKUS NGADA"]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...mockData]);
@@ -661,10 +661,14 @@ export const ManajemenSiswa: React.FC = () => {
             onChange={(e) => setClassFilter(e.target.value)}
             className="w-full py-2 px-3 text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-gray-100"
           >
-            <option value="">Semua Kelas</option>
+            <option value="">Semua Jurusan / Kelas</option>
+            <option value="DPIB">DPIB (Desain Pemodelan & Informasi Bangunan)</option>
+            <option value="TKP">TKP (Teknik Konstruksi & Perumahan)</option>
             <option value="TKJ">TKJ (Teknik Komputer & Jaringan)</option>
-            <option value="Multimedia">Multimedia / DKV</option>
-            <option value="RPL">RPL (Rekayasa Perangkat Lunak)</option>
+            <option value="TEI">TEI (Teknik Elektronika Industri)</option>
+            <option value="TKRO">TKRO (Teknik Kendaraan Ringan Otomotif)</option>
+            <option value="TSM">TSM (Teknik Sepeda Motor)</option>
+            <option value="TITL">TITL (Teknik Instalasi Tenaga Listrik)</option>
             <option value="XII">Kelas XII (Semua)</option>
             <option value="XI">Kelas XI (Semua)</option>
           </select>
@@ -915,6 +919,9 @@ export const ManajemenSiswa: React.FC = () => {
                       className="pl-9 pr-3 py-2 w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
                     />
                   </div>
+                  <p className="text-[10px] text-gray-400 mt-1 leading-normal">
+                    Pilihan jurusan: <span className="font-semibold text-gray-600 dark:text-gray-300">DPIB, TKP, TKJ, TEI, TKRO, TSM, atau TITL</span> (Contoh: XII DPIB A)
+                  </p>
                 </div>
 
                 {/* Password / Ubah Password */}
@@ -1125,7 +1132,7 @@ export const ManajemenSiswa: React.FC = () => {
                     <div className="flex items-start gap-2">
                       <FileSpreadsheet className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
                       <span>
-                        💡 <strong>Pilihan Jurusan (Pilih Jurus):</strong> Harap gunakan kata kunci jurusan resmi SMKS Sanjaya Bajawa: <strong>TKJ</strong> (Teknik Komputer & Jaringan), <strong>Multimedia</strong> (Multimedia / DKV), atau <strong>RPL</strong> (Rekayasa Perangkat Lunak) agar filter pencarian dan monitoring berfungsi sempurna.
+                        💡 <strong>Pilihan Jurusan (Pilih Jurus):</strong> Harap gunakan kata kunci jurusan resmi SMKS Sanjaya Bajawa: <strong>DPIB</strong>, <strong>TKP</strong>, <strong>TKJ</strong>, <strong>TEI</strong>, <strong>TKRO</strong>, <strong>TSM</strong>, atau <strong>TITL</strong> agar filter pencarian dan monitoring berfungsi sempurna.
                       </span>
                     </div>
                   </div>

@@ -416,9 +416,9 @@ export const TempatPkl: React.FC = () => {
       [1, "DINAS KOMINFO KAB. NGADA", "Daniel Kopong", "081339442710", "Ibaumuku, Bajawa, Ngada", "XII TKJ", 3, "NIKOLAUS L. A. KILA"],
       ["", "", "", "", "", "XII TKJ", "", "YOSEPH KEYS EREKE"],
       ["", "", "", "", "", "XII TKJ", "", "MARSELINO NONO"],
-      [2, "SANJAYA COMPUTER & SERVICE", "Gilbertus Mor", "081338423200", "Bong, Bajawa, Ngada", "XII RPL", 2, "MELKIADESALDINO RATO"],
-      ["", "", "", "", "", "XII RPL", "", "ROMOALDUS BELU"],
-      [3, "BAJAWA DIGITAL CREATIVE", "Yustina Soba", "081234567890", "Tanalodu, Bajawa, Ngada", "XII Multimedia", 1, "FRANSISKUS NGADA"]
+      [2, "CV SANJAYA DPIB SEJAHTERA", "Gilbertus Mor", "081338423200", "Bong, Bajawa, Ngada", "XII DPIB", 2, "MELKIADESALDINO RATO"],
+      ["", "", "", "", "", "XII DPIB", "", "ROMOALDUS BELU"],
+      [3, "SANJAYA MOTOR BAJAWA", "Yustina Soba", "081234567890", "Tanalodu, Bajawa, Ngada", "XII TSM", 1, "FRANSISKUS NGADA"]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...mockData]);
@@ -1216,7 +1216,7 @@ export const TempatPkl: React.FC = () => {
                     <div className="flex items-start gap-2">
                       <FileSpreadsheet className="w-4 h-4 shrink-0 mt-0.5 text-[#1565C0] dark:text-blue-400" />
                       <span>
-                        💡 <strong>Pilihan Jurusan (Pilih Jurus):</strong> Harap gunakan kata kunci jurusan resmi SMKS Sanjaya Bajawa: <strong>TKJ</strong> (Teknik Komputer & Jaringan), <strong>Multimedia</strong> (Multimedia / DKV), atau <strong>RPL</strong> (Rekayasa Perangkat Lunak) agar filter pencarian dan monitoring berfungsi sempurna.
+                        💡 <strong>Pilihan Jurusan (Pilih Jurus):</strong> Harap gunakan kata kunci jurusan resmi SMKS Sanjaya Bajawa: <strong>DPIB</strong>, <strong>TKP</strong>, <strong>TKJ</strong>, <strong>TEI</strong>, <strong>TKRO</strong>, <strong>TSM</strong>, atau <strong>TITL</strong> agar filter pencarian dan monitoring berfungsi sempurna.
                       </span>
                     </div>
                   </div>

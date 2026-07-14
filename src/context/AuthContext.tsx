@@ -92,37 +92,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else if (localProfileStr) {
             profile = JSON.parse(localProfileStr);
           } else {
-            // GANTI BAGIAN PENENTUAN ROLE INI:
-const email = firebaseUser.email || "";
-let role: UserRole = "siswa"; // Default
+            // Determine role by email
+            const email = firebaseUser.email || "";
+            let role: UserRole = "siswa";
+            if (email.includes("guru") || email === "sergiusnono80@guru.smk.belajar.id") {
+              role = "pembimbing";
+            } else if (email.includes("admin") || email === "wasosergio@gmail.com") {
+              role = "admin";
+            }
 
-// LOGIKA BARU YANG LEBIH CERDAS
-// 1. Cek Admin
-if (email.includes("admin") || email === "wasosergio@gmail.com") {
-  role = "admin";
-} 
-// 2. Cek Pembimbing (Guru)
-else if (email.includes("guru") || email.includes("@smksanjaya.sch.id")) { 
-  // Sesuaikan domain email guru Anda
-  role = "pembimbing";
-} 
-// 3. Cek Industri
-else if (email.includes("mitra") || email === "mas.nur@smksanjaya.sch.id") {
-  role = "industri";
-}
-// 4. Default ke siswa
-else {
-  role = "siswa";
-}
-},
+            profile = {
+              uid: firebaseUser.uid,
+              name: firebaseUser.displayName || "Pengguna PKL",
+              email: email,
+              role: role,
+              photoURL: firebaseUser.photoURL || undefined,
+              createdAt: new Date().toISOString(),
+            };
 
             // Seed with fields if it's our target guru
-            if (email === "maria.petronela.yohana.meo@smksanjaya.sch.id") {
-              profile.name = "Maria Petronela Yohana Meo, S.Kom";
+            if (email === "sergiusnono80@guru.smk.belajar.id") {
+              profile.name = "Drs. Sergius Nono";
             } else if (role === "siswa") {
               profile.nisn = "0081234567";
               profile.kelas = "XII TKJ";
-              profile.tempatPkl = "CV.EMANUEL";
+              profile.tempatPkl = "Dinas Kominfo Ngada";
             }
           }
 

@@ -144,7 +144,7 @@ export const SiswaMonitoring: React.FC = () => {
           id: "s4",
           name: "Katarina Ndona",
           nisn: "0085566778",
-          kelas: "XII RPL",
+          kelas: "XII DPIB",
           tempatPkl: "Sanjaya Motor Bajawa",
           attendanceRate: "100%",
           journalCount: 15,
@@ -194,7 +194,7 @@ export const SiswaMonitoring: React.FC = () => {
     try {
       const mockExcelData = [
         { name: "Arnoldus Golo", email: "arnoldgolo@siswa.sch.id", nisn: "0087788992", kelas: "XII TKJ", tempatPkl: "Telkom Indonesia Bajawa", tempatPklId: "p2" },
-        { name: "Theresia Soge", email: "theresiasoge@siswa.sch.id", nisn: "0086655441", kelas: "XII RPL", tempatPkl: "Sanjaya Motor Bajawa", tempatPklId: "p3" },
+        { name: "Theresia Soge", email: "theresiasoge@siswa.sch.id", nisn: "0086655441", kelas: "XII DPIB", tempatPkl: "Sanjaya Motor Bajawa", tempatPklId: "p3" },
         { name: "Fransiskus Nani", email: "fransnani@siswa.sch.id", nisn: "0083322119", kelas: "XII TKJ", tempatPkl: "Dinas Kominfo Ngada", tempatPklId: "p1" }
       ];
 

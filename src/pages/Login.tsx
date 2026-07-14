@@ -6,7 +6,7 @@ import { pklService } from "../services/pklService";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "motion/react";
-import { Mail, Lock, LogIn, AlertCircle, ShieldAlert, Sparkles, LogIn as GoogleIcon } from "lucide-react";
+import { Mail, Lock, LogIn, AlertCircle, ShieldAlert, Sparkles, LogIn as GoogleIcon, Eye, EyeOff } from "lucide-react";
 import * as z from "zod";
 
 // Zod Schema for Login Form Validation
@@ -27,6 +27,14 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Fill email field when clicking a demo account
+  const handleSelectDemoAccount = (email: string) => {
+    setValue("email", email);
+    setValue("password", ""); // Clear password so they must type it manually
+    setErrorMsg(null);
+  };
 
   const {
     register,
@@ -56,34 +64,72 @@ export const Login: React.FC = () => {
         return;
       }
 
+      // Hardcoded Admin check with specific password
+      if (emailLower === "wasosergio@gmail.com") {
+        if (data.password !== "sansa0910##*") {
+          setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
+          setIsSubmitting(false);
+          return;
+        }
+        await loginAsRole("admin", emailLower);
+        navigate("/dashboard");
+        return;
+      }
+
       // Look up if user exists in the database/profiles
       const allProfiles = await pklService.getAllUserProfiles();
       const existingProfile = allProfiles.find(p => p.email.toLowerCase() === emailLower);
 
       if (existingProfile) {
-        // If password is set and doesn't match, throw error!
-        if (existingProfile.password && existingProfile.password !== data.password) {
+        // We check the password stored in Firestore!
+        const correctPassword = existingProfile.password || 
+          (existingProfile.role === "pembimbing" ? "PembimbingSanjaya123" : 
+           existingProfile.role === "industri" ? "IndustriSanjaya123" : "SiswaSanjaya123");
+
+        if (data.password !== correctPassword) {
           setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
           setIsSubmitting(false);
           return;
         }
         await loginAsRole(existingProfile.role, emailLower);
       } else {
-        // Fallback or predefined seeds
+        // Fallback seeds if they haven't been saved in Firestore yet
         if (emailLower === "siswa@smksanjaya.sch.id") {
+          if (data.password !== "SiswaSanjaya123") {
+            setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
+            setIsSubmitting(false);
+            return;
+          }
           await loginAsRole("siswa", emailLower);
         } else if (emailLower === "sergiusnono80@guru.smk.belajar.id") {
+          if (data.password !== "PembimbingSanjaya123") {
+            setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
+            setIsSubmitting(false);
+            return;
+          }
           await loginAsRole("pembimbing", emailLower);
         } else if (emailLower === "penyelia@mitra.com") {
+          if (data.password !== "IndustriSanjaya123") {
+            setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
+            setIsSubmitting(false);
+            return;
+          }
           await loginAsRole("industri", emailLower);
-        } else if (emailLower === "wasosergio@gmail.com") {
-          await loginAsRole("admin", emailLower);
         } else {
           // Dynamic mock profile creation for other inputs to make it functional
           const isSupervisor = emailLower.includes("guru");
           const isIndustri = emailLower.includes("mitra") || emailLower.includes("penyelia") || emailLower.includes("industri");
           const isAdmin = emailLower.includes("admin");
           const role = isAdmin ? "admin" : isIndustri ? "industri" : isSupervisor ? "pembimbing" : "siswa";
+          
+          const fallbackPassword = role === "pembimbing" ? "PembimbingSanjaya123" : 
+                                   role === "industri" ? "IndustriSanjaya123" : "SiswaSanjaya123";
+          
+          if (data.password !== fallbackPassword) {
+            setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
+            setIsSubmitting(false);
+            return;
+          }
           await loginAsRole(role, emailLower);
         }
       }
@@ -120,11 +166,7 @@ export const Login: React.FC = () => {
     }
   };
 
-  // Quick helper to fill in test accounts
-  const fillTestAccount = (email: string) => {
-    setValue("email", email);
-    setValue("password", "p@ssword123");
-  };
+
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 font-sans">
@@ -198,13 +240,21 @@ export const Login: React.FC = () => {
                 </span>
                 <input
                   {...register("password")}
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className={`w-full pl-11 pr-4 py-3 rounded-xl border bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-[#1565C0] transition-all outline-none ${
+                  className={`w-full pl-11 pr-11 py-3 rounded-xl border bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-[#1565C0] transition-all outline-none ${
                     errors.password ? "border-red-400 focus:ring-red-400" : "border-gray-200"
                   }`}
                   id="input-login-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                  id="btn-toggle-password"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
               {errors.password && (
                 <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1 font-medium">
@@ -271,23 +321,76 @@ export const Login: React.FC = () => {
 
           {/* Quick Access Sandbox Shortcuts */}
           <div className="mt-8 bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-blue-800 dark:text-blue-400">
+            <div className="flex items-center gap-2 mb-3.5 text-xs font-bold text-blue-800 dark:text-blue-400">
               <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-bounce" />
-              <span>AKUN DEMO ADMINISTRATOR (Klik untuk Memilih)</span>
+              <span>PILIH AKUN DEMO (Klik untuk Isi Email)</span>
             </div>
-            <div className="grid grid-cols-1 gap-2">
+            <p className="text-[10.5px] text-gray-600 dark:text-gray-400 mb-3.5 leading-relaxed">
+              Klik akun di bawah untuk mengisi alamat email otomatis. Anda wajib memasukkan kata sandi secara manual agar dapat masuk ke akun tersebut.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* ADMIN */}
               <button
-                onClick={() => fillTestAccount("wasosergio@gmail.com")}
-                className="text-left text-xs bg-white dark:bg-gray-800 hover:bg-blue-50/80 dark:hover:bg-gray-700/80 p-2.5 rounded-lg border border-gray-150 dark:border-gray-700 flex items-center justify-between transition-colors shadow-sm"
+                onClick={() => handleSelectDemoAccount("wasosergio@gmail.com")}
+                className="text-left text-xs bg-white dark:bg-gray-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20 p-3 rounded-lg border border-gray-150 dark:border-gray-700 flex flex-col justify-between transition-colors shadow-xs cursor-pointer group"
                 type="button"
               >
-                <div>
-                  <p className="font-semibold text-gray-800 dark:text-gray-100">Admin PKL SMKS Sanjaya</p>
-                  <p className="text-gray-400 font-mono text-[10px]">wasosergio@gmail.com</p>
+                <div className="flex items-center justify-between w-full mb-1">
+                  <p className="font-bold text-gray-850 dark:text-gray-100 truncate group-hover:text-indigo-600">Admin PKL (Sanjaya)</p>
+                  <span className="bg-purple-100 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300 text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+                    Admin
+                  </span>
                 </div>
-                <span className="bg-purple-100 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                  Admin
-                </span>
+                <p className="text-gray-400 font-mono text-[9px] truncate">wasosergio@gmail.com</p>
+                <p className="text-[9.5px] text-amber-700 dark:text-amber-400 mt-1 font-semibold">Sandi: sansa0910##*</p>
+              </button>
+
+              {/* GURU PEMBIMBING */}
+              <button
+                onClick={() => handleSelectDemoAccount("sergiusnono80@guru.smk.belajar.id")}
+                className="text-left text-xs bg-white dark:bg-gray-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20 p-3 rounded-lg border border-gray-150 dark:border-gray-700 flex flex-col justify-between transition-colors shadow-xs cursor-pointer group"
+                type="button"
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <p className="font-bold text-gray-850 dark:text-gray-100 truncate group-hover:text-indigo-600">Drs. Sergius Nono</p>
+                  <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+                    Guru
+                  </span>
+                </div>
+                <p className="text-gray-400 font-mono text-[9px] truncate">sergiusnono80@guru.smk...</p>
+                <p className="text-[9.5px] text-gray-500 mt-1">Sandi: PembimbingSanjaya123</p>
+              </button>
+
+              {/* PEMBIMBING INDUSTRI */}
+              <button
+                onClick={() => handleSelectDemoAccount("penyelia@mitra.com")}
+                className="text-left text-xs bg-white dark:bg-gray-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20 p-3 rounded-lg border border-gray-150 dark:border-gray-700 flex flex-col justify-between transition-colors shadow-xs cursor-pointer group"
+                type="button"
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <p className="font-bold text-gray-850 dark:text-gray-100 truncate group-hover:text-indigo-600">Yosef Sanjaya</p>
+                  <span className="bg-orange-100 dark:bg-orange-950/50 text-orange-800 dark:text-orange-300 text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+                    Industri
+                  </span>
+                </div>
+                <p className="text-gray-400 font-mono text-[9px] truncate">penyelia@mitra.com</p>
+                <p className="text-[9.5px] text-gray-500 mt-1">Sandi: IndustriSanjaya123</p>
+              </button>
+
+              {/* SISWA PKL */}
+              <button
+                onClick={() => handleSelectDemoAccount("siswa@smksanjaya.sch.id")}
+                className="text-left text-xs bg-white dark:bg-gray-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20 p-3 rounded-lg border border-gray-150 dark:border-gray-700 flex flex-col justify-between transition-colors shadow-xs cursor-pointer group"
+                type="button"
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <p className="font-bold text-gray-850 dark:text-gray-100 truncate group-hover:text-indigo-600">Siswa Sanjaya</p>
+                  <span className="bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+                    Siswa
+                  </span>
+                </div>
+                <p className="text-gray-400 font-mono text-[9px] truncate">siswa@smksanjaya.sch.id</p>
+                <p className="text-[9.5px] text-gray-500 mt-1">Sandi: SiswaSanjaya123</p>
               </button>
             </div>
           </div>
