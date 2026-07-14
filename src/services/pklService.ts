@@ -2,13 +2,7 @@ import { db, auth, isFirebaseActive as originalIsFirebaseActive } from "../fireb
 import { onAuthStateChanged } from "firebase/auth";
 
 let isFirestoreBroken = false;
-let isFirebaseActive = false;
-
-if (originalIsFirebaseActive && auth) {
-  onAuthStateChanged(auth, (user) => {
-    isFirebaseActive = originalIsFirebaseActive && user !== null && !isFirestoreBroken;
-  });
-}
+let isFirebaseActive = originalIsFirebaseActive && !isFirestoreBroken;
 
 function markFirestoreBroken() {
   if (!isFirestoreBroken) {
