@@ -226,18 +226,13 @@ export const pklService = {
         querySnapshot.forEach((docSnap) => {
           placements.push({ id: docSnap.id, ...docSnap.data() } as TempatPkl);
         });
-        if (placements.length === 0) {
-          // Seed firestore if empty
-          for (const pl of DEFAULT_PLACEMENTS) {
-            await setDoc(doc(db, path, pl.id), {
-              nama: pl.nama,
-              alamat: pl.alamat,
-              pimpinan: pl.pimpinan,
-              kuota: pl.kuota,
-            });
-            placements.push(pl);
-          }
-        }
+// if (placements.length === 0) {
+// Seed firestore if empty
+// for (const pl of DEFAULT_PLACEMENTS) {
+// await setDoc(doc(db, path, pl.id), { ... });
+// placements.push(pl);
+//     }
+// }
         return placements;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
