@@ -31,7 +31,7 @@ if (hasValidConfig) {
   try {
     app = getApps().length === 0 ? initializeApp(resolvedConfig) : getApp();
     auth = getAuth(app);
-    db = getFirestore(app, resolvedConfig.firestoreDatabaseId || undefined);
+    db = getFirestore(app);
     isFirebaseActive = true;
     console.log("🔥 Firebase (firebase.ts) initialized successfully!");
   } catch (error) {
