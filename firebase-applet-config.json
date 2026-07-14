@@ -1,9 +1,8 @@
 {
   "projectId": "aplikasi-pklsmk-terbaru2680",
-  "appId": "1:476816000214:web:c3b97ca244f12f940db577",
+  "appId": "1:590309795926:web:9a28b226bd71a17de933f7",
   "apiKey": "AIzaSyDw1eObcEZT_yvqJOEzLLJlv3l7pcRwCNg",
   "authDomain": "aplikasi-pklsmk-terbaru2680.firebaseapp.com",
-  "storageBucket": "aplikasi-pklsmk-terbaru2680.firebasestorage.app",
-  "messagingSenderId": "590309795926",
-  "measurementId": "",
+  "storageBucket": "aplikasi-pklsmk-terbaru2680.appspot.com",
+  "messagingSenderId": "590309795926"
 }
