@@ -202,8 +202,8 @@ export const ManajemenSiswa: React.FC = () => {
           nisn: formNisn.trim(),
           kelas: formKelas.trim(),
           tempatPkl: selectedPlacementName,
-          tempatPklId: formTempatPklId || undefined,
-          pembimbingId: formPembimbingId || undefined,
+          tempatPklId: formTempatPklId || "",
+          pembimbingId: formPembimbingId || "",
           tahunAjaran: activeSettings.tahunAjaranAktif,
           password: formPassword.trim() || "PasswordSanjaya123", // fallback default
           createdAt: new Date().toISOString()
