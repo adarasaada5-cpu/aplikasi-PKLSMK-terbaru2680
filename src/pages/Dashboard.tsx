@@ -55,6 +55,19 @@ export const Dashboard: React.FC = () => {
             .map((u) => u.uid);
           jList = jList.filter((j) => myStudentIds.includes(j.userId));
           aList = aList.filter((a) => myStudentIds.includes(a.userId));
+        } else if (user?.role === "pembimbing") {
+          // Filter to only students assigned to this teacher advisor (pembimbing)
+          const myStudentIds = uList
+            .filter((u) => {
+              if (u.role !== "siswa") return false;
+              if (u.pembimbingId === user.uid) return true;
+              if (!u.pembimbingId) return false;
+              const p = uList.find(pProfile => pProfile.uid === u.pembimbingId);
+              return p && p.email?.toLowerCase() === user.email?.toLowerCase();
+            })
+            .map((u) => u.uid);
+          jList = jList.filter((j) => myStudentIds.includes(j.userId));
+          aList = aList.filter((a) => myStudentIds.includes(a.userId));
         }
 
         setJournals(jList);
@@ -400,6 +413,19 @@ export const Dashboard: React.FC = () => {
 
   // Render Pembimbing (Supervisor) Dashboard
   const renderPembimbingDashboard = () => {
+    const myStudentsList = profiles.filter((p) => {
+      if (p.role !== "siswa") return false;
+      if (p.pembimbingId === user?.uid) return true;
+      if (!p.pembimbingId) return false;
+      const pembimbing = profiles.find((prof) => prof.uid === p.pembimbingId);
+      return pembimbing && pembimbing.email?.toLowerCase() === user?.email?.toLowerCase();
+    });
+    const myStudentsListIds = myStudentsList.map((s) => s.uid);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayAttendanceLogs = attendance.filter((a) => a.tanggal === todayStr && myStudentsListIds.includes(a.userId));
+    const presentTodayCount = todayAttendanceLogs.filter((a) => a.status === "hadir").length;
+    const todayAttendanceRate = myStudentsList.length > 0 ? Math.round((presentTodayCount / myStudentsList.length) * 100) : 100;
+
     return (
       <div className="space-y-6">
         {/* Welcome Hero Banner */}
@@ -429,7 +455,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Siswa</p>
-              <h3 className="text-xl font-bold text-gray-900 mt-1">5 Siswa</h3>
+              <h3 className="text-xl font-bold text-gray-900 mt-1">{myStudentsList.length} Siswa</h3>
             </div>
           </div>
 
@@ -459,18 +485,24 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Kehadiran Hari Ini</p>
-              <h3 className="text-xl font-bold text-gray-900 mt-1">100%</h3>
+              <h3 className="text-xl font-bold text-gray-900 mt-1">{todayAttendanceRate}%</h3>
             </div>
           </div>
         </div>
 
         {/* Ringkasan & Statistik Absensi Siswa Bimbingan */}
         {(() => {
-          const myStudents = profiles.filter((p) => p.role === "siswa" && (p.pembimbingId === user?.uid || !user?.pembimbingId));
+          const myStudents = profiles.filter((p) => {
+            if (p.role !== "siswa") return false;
+            if (p.pembimbingId === user?.uid) return true;
+            if (!p.pembimbingId) return false;
+            const pembimbing = profiles.find((prof) => prof.uid === p.pembimbingId);
+            return pembimbing && pembimbing.email?.toLowerCase() === user?.email?.toLowerCase();
+          });
           const myStudentIds = myStudents.map((s) => s.uid);
           const myAttendance = myStudentIds.length > 0 
             ? attendance.filter((a) => myStudentIds.includes(a.userId)) 
-            : attendance;
+            : [];
 
           const pDays = myAttendance.filter((a) => a.status === "hadir").length;
           const sDays = myAttendance.filter((a) => a.status === "sakit").length;

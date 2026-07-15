@@ -44,6 +44,7 @@ export const Penilaian: React.FC = () => {
   const { user } = useAuth();
   const [assessments, setAssessments] = useState<PenilaianPkl[]>([]);
   const [students, setStudents] = useState<UserProfile[]>([]);
+  const [allProfiles, setAllProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -135,9 +136,23 @@ export const Penilaian: React.FC = () => {
   const [studentToPrint, setStudentToPrint] = useState<UserProfile | null>(null);
   const [printBulk, setPrintBulk] = useState(false);
 
+  // Filter student list based on current user's role (assigned students)
+  const myStudents = students.filter(s => {
+    if (user?.role === "pembimbing") {
+      if (s.pembimbingId === user.uid) return true;
+      if (!s.pembimbingId) return false;
+      const pembimbing = allProfiles.find(p => p.uid === s.pembimbingId);
+      return pembimbing && pembimbing.email?.toLowerCase() === user.email?.toLowerCase();
+    }
+    if (user?.role === "industri") {
+      return (user.tempatPklId && s.tempatPklId === user.tempatPklId) || (user.tempatPkl && s.tempatPkl === user.tempatPkl);
+    }
+    return true;
+  });
+
   // Dynamic filter lists derived from data
-  const uniqueClasses = Array.from(new Set(students.map(s => s.kelas).filter(Boolean))) as string[];
-  const uniqueMitra = Array.from(new Set(students.map(s => s.tempatPkl).filter(Boolean))) as string[];
+  const uniqueClasses = Array.from(new Set(myStudents.map(s => s.kelas).filter(Boolean))) as string[];
+  const uniqueMitra = Array.from(new Set(myStudents.map(s => s.tempatPkl).filter(Boolean))) as string[];
 
   // Export & Print Handlers
   const handleExportExcel = () => {
@@ -256,6 +271,7 @@ export const Penilaian: React.FC = () => {
         // Filter out non-students
         const siswaProfiles = profileList.filter(p => p.role === "siswa");
         setStudents(siswaProfiles);
+        setAllProfiles(profileList);
       } catch (err) {
         console.error("Gagal memuat data penilaian:", err);
       } finally {
@@ -424,7 +440,7 @@ export const Penilaian: React.FC = () => {
     }
   };
 
-  const filteredStudents = students.filter(s => {
+  const filteredStudents = myStudents.filter(s => {
     // 1. Student selection filter dropdown
     const matchesStudentSelection = selectedStudentId ? s.uid === selectedStudentId : true;
     if (!matchesStudentSelection) return false;
@@ -869,7 +885,7 @@ export const Penilaian: React.FC = () => {
               id="select-student-filter-penilaian"
             >
               <option value="">-- Semua Siswa (Semua Data) --</option>
-              {students.map(s => (
+              {myStudents.map(s => (
                 <option key={s.uid} value={s.uid}>
                   {s.name} ({s.kelas || "Tanpa Kelas"})
                 </option>
@@ -1121,14 +1137,14 @@ export const Penilaian: React.FC = () => {
               <select
                 value={selectedStudent?.uid || ""}
                 onChange={(e) => {
-                  const s = students.find(item => item.uid === e.target.value);
+                  const s = myStudents.find(item => item.uid === e.target.value);
                   if (s) {
                     handleOpenAssessDialog(s);
                   }
                 }}
                 className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl outline-none focus:border-blue-600 font-semibold cursor-pointer"
               >
-                {students.map(s => (
+                {myStudents.map(s => (
                   <option key={s.uid} value={s.uid}>
                     {s.name} ({s.kelas}) — {s.tempatPkl || "Belum Ada Mitra"}
                   </option>
@@ -1677,7 +1693,7 @@ export const Penilaian: React.FC = () => {
               DAFTAR REKAPITULASI PENILAIAN PRAKTIK KERJA LAPANGAN (PKL)
             </h1>
             <h2 className="text-xs font-semibold">
-              SMK NEGERI 1 BAJAWA • TAHUN PELAJARAN {new Date().getFullYear() - 1}/{new Date().getFullYear()}
+              SMKS SANJAYA BAJAWA • TAHUN PELAJARAN {new Date().getFullYear() - 1}/{new Date().getFullYear()}
             </h2>
             <p className="text-[10px] text-gray-500 italic">
               Dicetak pada: {new Date().toLocaleDateString("id-ID", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -1733,9 +1749,9 @@ export const Penilaian: React.FC = () => {
             </div>
             <div className="w-1/3" />
             <div className="w-1/3 text-center space-y-12">
-              <p>Bajawa, {new Date().toLocaleDateString("id-ID", { year: 'numeric', month: 'long', day: 'numeric' })}<br />Kepala Sekolah / Admin</p>
+              <p>Bajawa, {new Date().toLocaleDateString("id-ID", { year: 'numeric', month: 'long', day: 'numeric' })}<br />Kepala Sekolah</p>
               <div className="h-16" />
-              <p className="font-bold underline">{user?.name || "Administrator"}</p>
+              <p className="font-bold underline">ELISABETH NENA,ST.,Gr.,M.Kom</p>
               <p className="text-[9px] text-gray-500">NIP. -</p>
             </div>
           </div>
@@ -1756,10 +1772,10 @@ export const Penilaian: React.FC = () => {
               DINAS PENDIDIKAN DAN KEBUDAYAAN
             </h2>
             <h2 className="text-base font-extrabold uppercase tracking-wider text-black mt-0.5">
-              SMK NEGERI 1 BAJAWA
+              SMKS SANJAYA BAJAWA
             </h2>
             <p className="text-[9px] text-gray-500 italic mt-0.5">
-              Jalan Tendean No. 24 Bajawa, Ngada, NTT • Email: info@smkn1bajawa.sch.id
+              Jl. Ahmad Yani No. 12, Bajawa, Flores, NTT • Email: smkssanjayabajawa@gmail.com
             </p>
           </div>
 

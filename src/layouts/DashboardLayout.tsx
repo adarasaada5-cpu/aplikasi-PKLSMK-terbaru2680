@@ -93,7 +93,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         }
       };
       loadNotifications();
-      const interval = setInterval(loadNotifications, 10000);
+      const interval = setInterval(loadNotifications, 180000);
       return () => clearInterval(interval);
     }
   }, [user]);

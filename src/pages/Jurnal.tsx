@@ -4,7 +4,7 @@ import { pklService } from "../services/pklService";
 import { JurnalEntry } from "../models/types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, CheckCircle2, AlertCircle, Calendar, PlusCircle, HelpCircle, Camera, Trash2, X } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle, Calendar, PlusCircle, HelpCircle, Camera, Trash2, X, Edit2 } from "lucide-react";
 import * as z from "zod";
 
 // Zod Schema for Jurnal Validation
@@ -37,6 +37,10 @@ export const Jurnal: React.FC = () => {
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [selectedPhotoModal, setSelectedPhotoModal] = useState<string | null>(null);
 
+  // States for Edit & Delete
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const todayStr = new Date().toISOString().split("T")[0];
 
   const {
@@ -53,6 +57,53 @@ export const Jurnal: React.FC = () => {
       solusi: "",
     },
   });
+
+  const handleStartEdit = (j: JurnalEntry) => {
+    setEditingId(j.id);
+    reset({
+      tanggal: j.tanggal,
+      kegiatan: j.kegiatan,
+      kendala: j.kendala || "",
+      solusi: j.solusi || "",
+    });
+    setPhoto(j.fotoUrl || null);
+    setPhotoName(j.fotoUrl ? "Foto Terlampir" : "");
+    document.getElementById("form-jurnal")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    reset({
+      tanggal: todayStr,
+      kegiatan: "",
+      kendala: "",
+      solusi: "",
+    });
+    setPhoto(null);
+    setPhotoName("");
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeletingId(id);
+  };
+
+  const handleConfirmDelete = async (id: string) => {
+    try {
+      await pklService.deleteJurnal(id);
+      if ((window as any).showToast) {
+        (window as any).showToast("Laporan Jurnal Harian berhasil dihapus!", "success");
+      }
+      if (editingId === id) {
+        handleCancelEdit();
+      }
+      setDeletingId(null);
+      await loadJournals();
+    } catch (err: any) {
+      if ((window as any).showToast) {
+        (window as any).showToast("Gagal menghapus jurnal harian.", "error");
+      }
+    }
+  };
 
   const loadJournals = async () => {
     if (!user) return;
@@ -124,25 +175,43 @@ export const Jurnal: React.FC = () => {
     setSuccessMsg(null);
     setErrorMsg(null);
     try {
-      // Check if journal for this date already exists
-      const alreadyExists = journals.some((j) => j.tanggal === data.tanggal);
-      if (alreadyExists) {
-        throw new Error(`Jurnal untuk tanggal ${data.tanggal} sudah dikirim sebelumnya.`);
+      if (editingId) {
+        // Updating existing journal
+        await pklService.updateJurnal(editingId, {
+          tanggal: data.tanggal,
+          kegiatan: data.kegiatan,
+          kendala: data.kendala,
+          solusi: data.solusi,
+          fotoUrl: photo || undefined,
+        });
+
+        if ((window as any).showToast) {
+          (window as any).showToast("Laporan Jurnal Harian berhasil diperbarui untuk ditinjau kembali!", "success");
+        }
+        setEditingId(null);
+      } else {
+        // Creating a new journal
+        // Check if journal for this date already exists
+        const alreadyExists = journals.some((j) => j.tanggal === data.tanggal);
+        if (alreadyExists) {
+          throw new Error(`Jurnal untuk tanggal ${data.tanggal} sudah dikirim sebelumnya.`);
+        }
+
+        await pklService.createJurnal({
+          userId: user.uid,
+          userName: user.name,
+          tanggal: data.tanggal,
+          kegiatan: data.kegiatan,
+          kendala: data.kendala,
+          solusi: data.solusi,
+          fotoUrl: photo || undefined,
+        });
+
+        if ((window as any).showToast) {
+          (window as any).showToast("Laporan Jurnal Harian berhasil diserahkan untuk ditinjau!", "success");
+        }
       }
 
-      await pklService.createJurnal({
-        userId: user.uid,
-        userName: user.name,
-        tanggal: data.tanggal,
-        kegiatan: data.kegiatan,
-        kendala: data.kendala,
-        solusi: data.solusi,
-        fotoUrl: photo || undefined,
-      });
-
-      if ((window as any).showToast) {
-        (window as any).showToast("Laporan Jurnal Harian berhasil diserahkan untuk ditinjau!", "success");
-      }
       reset({
         tanggal: todayStr,
         kegiatan: "",
@@ -196,8 +265,28 @@ export const Jurnal: React.FC = () => {
         {/* Form Panel */}
         <div className="lg:col-span-5 bg-white dark:bg-[#111827] p-6 rounded-2xl border border-gray-200/60 dark:border-gray-800/80 shadow-sm">
           <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-5 flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-[#1565C0] dark:text-[#60A5FA]" /> Buat Laporan Jurnal Baru
+            {editingId ? (
+              <>
+                <Edit2 className="w-5 h-5 text-amber-500" /> Edit Laporan Jurnal Harian
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-5 h-5 text-[#1565C0] dark:text-[#60A5FA]" /> Buat Laporan Jurnal Baru
+              </>
+            )}
           </h3>
+
+          {editingId && (
+            <div className="mb-4 bg-amber-50 dark:bg-amber-950/10 border border-amber-200 dark:border-amber-950/30 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Mode Edit Aktif:</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                  Mengedit jurnal ini akan membatalkan persetujuan guru pembimbing dan mengubah statusnya kembali menjadi <strong>Tertunda</strong> untuk ditinjau ulang.
+                </p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" id="form-jurnal">
             <div>
@@ -332,21 +421,34 @@ export const Jurnal: React.FC = () => {
               )}
             </div>
 
-            <button
-              type="submit"
-              className="w-full bg-[#1565C0] hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md hover:shadow-lg mt-4"
-              id="btn-jurnal-submit"
-            >
-              Kirim Jurnal Harian
-            </button>
+            <div className="flex gap-2.5 mt-4">
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="flex-1 bg-gray-100 hover:bg-gray-250 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-750 dark:text-gray-300 font-semibold py-2.5 px-4 rounded-xl text-xs transition-all border border-gray-200 dark:border-gray-700"
+                >
+                  Batal Edit
+                </button>
+              )}
+              <button
+                type="submit"
+                className={`flex-[2] text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md hover:shadow-lg ${
+                  editingId ? "bg-amber-500 hover:bg-amber-600" : "bg-[#1565C0] hover:bg-blue-700"
+                }`}
+                id="btn-jurnal-submit"
+              >
+                {editingId ? "Simpan Perubahan" : "Kirim Jurnal Harian"}
+              </button>
+            </div>
           </form>
         </div>
 
         {/* History Panel */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-white dark:bg-[#111827] p-6 rounded-2xl border border-gray-200/60 dark:border-gray-800/80 shadow-sm flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-5 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[#2E7D32]" /> Riwayat Laporan Jurnal Harian
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-5 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-[#2E7D32] dark:text-[#4ADE80]" /> Riwayat Laporan Jurnal Harian
             </h3>
 
             {journals.length === 0 ? (
@@ -360,47 +462,84 @@ export const Jurnal: React.FC = () => {
                 {journals.map((j) => (
                   <div
                     key={j.id}
-                    className="p-4 rounded-2xl border border-gray-150 bg-gray-50/50 hover:bg-white transition-all hover:shadow-sm"
+                    className="p-4 rounded-2xl border border-gray-150 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 hover:bg-white dark:hover:bg-gray-900/60 transition-all hover:shadow-sm"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-bold text-gray-800 flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         {j.tanggal}
                       </span>
-                      <span
-                        className={`text-[9px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                          j.status === "approved"
-                            ? "bg-green-100 text-[#2E7D32]"
-                            : j.status === "rejected"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {j.status === "approved" ? "Disetujui" : j.status === "rejected" ? "Ditolak" : "Tertunda"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[9px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                            j.status === "approved"
+                              ? "bg-green-100 dark:bg-green-950/30 text-[#2E7D32] dark:text-green-400"
+                              : j.status === "rejected"
+                                ? "bg-red-100 dark:bg-red-950/30 text-red-800 dark:text-red-400"
+                                : "bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-400"
+                          }`}
+                        >
+                          {j.status === "approved" ? "Disetujui" : j.status === "rejected" ? "Ditolak" : "Tertunda"}
+                        </span>
+
+                        {deletingId === j.id ? (
+                          <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/20 px-2 py-1 rounded-lg border border-red-200 dark:border-red-900/30">
+                            <span className="text-[10px] text-red-700 dark:text-red-400 font-bold">Hapus?</span>
+                            <button
+                              onClick={() => handleConfirmDelete(j.id)}
+                              className="text-[10px] font-bold text-white bg-red-600 hover:bg-red-700 px-2 py-0.5 rounded transition-colors"
+                            >
+                              Ya
+                            </button>
+                            <button
+                              onClick={() => setDeletingId(null)}
+                              className="text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-0.5 rounded transition-colors"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleStartEdit(j)}
+                              className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                              title="Edit Jurnal"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(j.id)}
+                              className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                              title="Hapus Jurnal"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="mt-3.5 space-y-2">
                       <div>
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Kegiatan Pekerjaan</p>
-                        <p className="text-xs text-gray-700 mt-0.5 whitespace-pre-line">{j.kegiatan}</p>
+                        <p className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">Kegiatan Pekerjaan</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-300 mt-0.5 whitespace-pre-line">{j.kegiatan}</p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                         <div>
-                          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Kendala Lapangan</p>
-                          <p className="text-xs text-gray-600 mt-0.5 italic">{j.kendala || "-"}</p>
+                          <p className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">Kendala Lapangan</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 italic">{j.kendala || "-"}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Solusi Penyelesaian</p>
-                          <p className="text-xs text-gray-600 mt-0.5">{j.solusi || "-"}</p>
+                          <p className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">Solusi Penyelesaian</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{j.solusi || "-"}</p>
                         </div>
                       </div>
 
                       {j.fotoUrl && (
-                        <div className="pt-2.5 border-t border-gray-100 mt-2">
-                          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1.5">Foto Kegiatan</p>
+                        <div className="pt-2.5 border-t border-gray-100 dark:border-gray-800 mt-2">
+                          <p className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider mb-1.5">Foto Kegiatan</p>
                           <div 
-                            className="relative group overflow-hidden rounded-xl border border-gray-250 bg-gray-100 max-w-xs cursor-pointer"
+                            className="relative group overflow-hidden rounded-xl border border-gray-250 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 max-w-xs cursor-pointer"
                             onClick={() => setSelectedPhotoModal(j.fotoUrl || null)}
                           >
                             <img src={j.fotoUrl} alt="Dokumentasi Jurnal" className="max-h-28 w-auto object-cover rounded-xl transition-all group-hover:scale-105" referrerPolicy="no-referrer" />

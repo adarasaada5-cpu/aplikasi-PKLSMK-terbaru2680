@@ -374,10 +374,16 @@ export const ManajemenPembimbing: React.FC = () => {
           if (isHeader) {
             firstRow.forEach((cell, idx) => {
               const val = String(cell || "").toLowerCase();
-              if (val.includes("nama") || val.includes("pimpinan") || val.includes("pemilik") || val.includes("kontak")) nameIdx = idx;
-              else if (val.includes("email") || val.includes("surel")) emailIdx = idx;
-              else if (val.includes("password") || val.includes("sandi")) passwordIdx = idx;
-              else if (val.includes("mitra") || val.includes("dudi") || val.includes("tempat") || val.includes("perusahaan")) dudiIdx = idx;
+              // We check for mitra / dudi column first, because it might contain the word "nama" (e.g. "Nama Mitra Industri PKL")
+              if (val.includes("mitra") || val.includes("dudi") || val.includes("tempat") || val.includes("perusahaan")) {
+                dudiIdx = idx;
+              } else if (val.includes("nama") || val.includes("pimpinan") || val.includes("pemilik") || val.includes("kontak")) {
+                nameIdx = idx;
+              } else if (val.includes("email") || val.includes("surel")) {
+                emailIdx = idx;
+              } else if (val.includes("password") || val.includes("sandi")) {
+                passwordIdx = idx;
+              }
             });
           }
 
@@ -707,7 +713,7 @@ export const ManajemenPembimbing: React.FC = () => {
               <p>Bajawa, ${new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               <p>Kepala Sekolah SMK Swasta Sanjaya,</p>
               <div class="signature-line">
-                Fransiskus Nono, S.Kom
+                ELISABETH NENA,ST.,Gr.,M.Kom
               </div>
             </div>
           </div>

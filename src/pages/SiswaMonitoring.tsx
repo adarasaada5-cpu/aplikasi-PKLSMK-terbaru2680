@@ -178,7 +178,12 @@ export const SiswaMonitoring: React.FC = () => {
         }
       });
 
-      setStudents(studentRoster);
+      // Filter out deleted profiles (both custom and hardcoded defaults)
+      const deletedStored = localStorage.getItem("pkl_deleted_profiles");
+      const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
+      const activeRoster = studentRoster.filter(s => !deletedList.includes(s.id));
+
+      setStudents(activeRoster);
     } catch (err) {
       console.error("Error calculating student stats:", err);
     } finally {
@@ -220,7 +225,31 @@ export const SiswaMonitoring: React.FC = () => {
     }
   };
 
-  // Filter students based on supervisor company if role is "industri"
+  const isStudentOfPembimbing = (studentId: string, studentPembimbingId?: string) => {
+    if (user?.role !== "pembimbing") return true;
+
+    // 1. If we have a direct pembimbingId, check it
+    if (studentPembimbingId && studentPembimbingId === user?.uid) return true;
+
+    // 2. Otherwise find the student profile in allProfiles
+    const studentProfile = allProfiles.find(p => p.uid === studentId);
+    if (studentProfile) {
+      if (studentProfile.pembimbingId === user?.uid) return true;
+      if (!studentProfile.pembimbingId) return false;
+      const pembimbing = allProfiles.find(prof => prof.uid === studentProfile.pembimbingId);
+      return pembimbing && pembimbing.email?.toLowerCase() === user?.email?.toLowerCase();
+    }
+
+    // 3. Fallback for the hardcoded student "siswa_sanjaya_123" under "pembimbing_sergius_456" (Drs. Sergius Nono)
+    const isSergius = user?.uid === "pembimbing_sergius_456" || user?.email?.toLowerCase() === "sergiusnono80@guru.smk.belajar.id";
+    if (isSergius && studentId === "siswa_sanjaya_123") {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Filter students based on supervisor company if role is "industri", or teacher supervisor if role is "pembimbing"
   const myCompanyStudents = students.filter((s) => {
     if (user?.role === "industri") {
       const studentPlaceId = s.id === "siswa_sanjaya_123" ? "p1" : 
@@ -246,6 +275,12 @@ export const SiswaMonitoring: React.FC = () => {
       }
       return false;
     }
+
+    if (user?.role === "pembimbing") {
+      const studentProfile = allProfiles.find(p => p.uid === s.id);
+      return isStudentOfPembimbing(s.id, studentProfile?.pembimbingId);
+    }
+
     return true;
   });
 
@@ -278,6 +313,10 @@ export const SiswaMonitoring: React.FC = () => {
     if (user?.role === "industri") {
       const studentProfile = allProfiles.find(p => p.uid === entry.userId);
       return isStudentOfSupervisor(entry.userId, studentProfile?.tempatPkl, studentProfile?.tempatPklId);
+    }
+    if (user?.role === "pembimbing") {
+      const studentProfile = allProfiles.find(p => p.uid === entry.userId);
+      return isStudentOfPembimbing(entry.userId, studentProfile?.pembimbingId);
     }
     return true;
   });

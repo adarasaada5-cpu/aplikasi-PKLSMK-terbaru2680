@@ -57,33 +57,110 @@ export const Presensi: React.FC = () => {
     },
   });
 
-  // Fetch coordinates on mount
-  useEffect(() => {
+  // Fetch coordinates on mount and on demand
+  const getGpsLocation = () => {
+    setGpsCoords(null);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
           setGpsCoords({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            address: `Dinas Kominfo, Bajawa, Kabupaten Ngada, NTT (${position.coords.latitude.toFixed(4)}°, ${position.coords.longitude.toFixed(4)}°)`
+            latitude: lat,
+            longitude: lng,
+            address: `Memetakan koordinat (${lat.toFixed(4)}, ${lng.toFixed(4)})...`
+          });
+
+          try {
+            // Try Nominatim OSM Reverse Geocoding with a 5-second timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+              {
+                signal: controller.signal,
+                headers: {
+                  "Accept-Language": "id-ID,id;q=0.9,en;q=0.8"
+                }
+              }
+            );
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.display_name) {
+                setGpsCoords({
+                  latitude: lat,
+                  longitude: lng,
+                  address: `${data.display_name} (${lat.toFixed(4)}°, ${lng.toFixed(4)}°)`
+                });
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn("Nominatim reverse geocoding failed or timed out:", e);
+          }
+
+          // Fallback to coordinates with simple description
+          setGpsCoords({
+            latitude: lat,
+            longitude: lng,
+            address: `Lokasi Presisi Terdeteksi (${lat.toFixed(6)}°, ${lng.toFixed(6)}°)`
           });
         },
-        (error) => {
-          console.warn("Using simulated school GPS location:", error);
+        async (error) => {
+          console.warn("Browser GPS failed, trying IP fallback:", error);
+          
+          try {
+            // Try IP Geolocation fallback
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            
+            const response = await fetch("https://ipapi.co/json/", { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.latitude && data.longitude) {
+                const lat = data.latitude;
+                const lng = data.longitude;
+                const city = data.city || "Bajawa";
+                const region = data.region || "Nusa Tenggara Timur";
+                
+                setGpsCoords({
+                  latitude: lat,
+                  longitude: lng,
+                  address: `${city}, ${region}, Indonesia (Estimasi IP Geolocation)`
+                });
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn("IP Geolocation fallback failed:", e);
+          }
+
+          // Ultimate fallback to School default
           setGpsCoords({
             latitude: -8.7911,
             longitude: 120.9734,
-            address: "SMKS Sanjaya Bajawa, Jl. S. Parman, Ngada, NTT (GPS Terkalibrasi)"
+            address: "SMKS Sanjaya Bajawa, Jl. S. Parman, Ngada, NTT (Fallback GPS Standar)"
           });
-        }
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
       );
     } else {
       setGpsCoords({
         latitude: -8.7911,
         longitude: 120.9734,
-        address: "SMKS Sanjaya Bajawa, Jl. S. Parman, Ngada, NTT (GPS Terkalibrasi)"
+        address: "SMKS Sanjaya Bajawa, Jl. S. Parman, Ngada, NTT (Browser Tidak Mendukung Geolocation)"
       });
     }
+  };
+
+  useEffect(() => {
+    getGpsLocation();
   }, []);
 
   const fetchAttendance = async () => {
@@ -298,12 +375,22 @@ export const Presensi: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmitClockIn)} className="space-y-4">
-                <div className="bg-blue-50/50 dark:bg-blue-950/10 p-3.5 rounded-xl border border-blue-100 dark:border-blue-950/30 flex items-start gap-2 text-xs text-blue-800 dark:text-blue-300 font-medium">
-                  <MapPin className="w-4 h-4 text-[#1565C0] shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold">Informasi Lokasi Geotagging:</p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{gpsCoords?.address || "Mencari koordinat GPS..."}</p>
+                <div className="bg-blue-50/50 dark:bg-blue-950/10 p-3.5 rounded-xl border border-blue-100 dark:border-blue-950/30 flex items-start justify-between gap-2 text-xs text-blue-800 dark:text-blue-300 font-medium">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-[#1565C0] shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Informasi Lokasi Geotagging:</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{gpsCoords?.address || "Mencari koordinat GPS..."}</p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={getGpsLocation}
+                    title="Perbarui GPS"
+                    className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors text-blue-600 dark:text-blue-400 shrink-0 self-center"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 {/* Selfie Widget Container */}

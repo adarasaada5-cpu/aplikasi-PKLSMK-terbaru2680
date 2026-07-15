@@ -2,13 +2,12 @@ import { db, auth, isFirebaseActive as originalIsFirebaseActive } from "../fireb
 import { onAuthStateChanged } from "firebase/auth";
 
 let isFirestoreBroken = false;
-let isFirebaseActive = originalIsFirebaseActive && !isFirestoreBroken;
+let isFirebaseActive = originalIsFirebaseActive;
 
 function markFirestoreBroken() {
   if (!isFirestoreBroken) {
     isFirestoreBroken = true;
-    isFirebaseActive = false;
-    console.warn("⚠️ Firestore is currently unreachable or permission was denied. Switching to local-first backup database!");
+    console.warn("⚠️ Firestore encountered an error. Please check your Firestore rules or connection!");
   }
 }
 import {
@@ -226,13 +225,18 @@ export const pklService = {
         querySnapshot.forEach((docSnap) => {
           placements.push({ id: docSnap.id, ...docSnap.data() } as TempatPkl);
         });
-// if (placements.length === 0) {
-// Seed firestore if empty
-// for (const pl of DEFAULT_PLACEMENTS) {
-// await setDoc(doc(db, path, pl.id), { ... });
-// placements.push(pl);
-//     }
-// }
+        if (placements.length === 0) {
+          // Seed firestore if empty
+          for (const pl of DEFAULT_PLACEMENTS) {
+            await setDoc(doc(db, path, pl.id), {
+              nama: pl.nama,
+              alamat: pl.alamat,
+              pimpinan: pl.pimpinan,
+              kuota: pl.kuota,
+            });
+            placements.push(pl);
+          }
+        }
         return placements;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -344,10 +348,28 @@ export const pklService = {
 
   async importTempatPklBulk(placementsList: Omit<TempatPkl, "id">[]): Promise<TempatPkl[]> {
     const imported: TempatPkl[] = [];
+    const existingPlacements = await this.getTempatPkl();
+
     for (const item of placementsList) {
-      const newPlacement = await this.addTempatPkl(item);
-      imported.push(newPlacement);
-      await this.addAuditLog("Import Mitra", `Mengimpor mitra industri baru: ${newPlacement.nama} (Kuota: ${newPlacement.kuota})`);
+      const existing = existingPlacements.find(p => 
+        p.nama.toLowerCase().trim() === item.nama.toLowerCase().trim()
+      );
+
+      if (existing) {
+        // Update existing DUDI to prevent duplicate entries
+        const updated = await this.updateTempatPkl(existing.id, {
+          ...existing,
+          nama: item.nama,
+          alamat: item.alamat || existing.alamat,
+          pimpinan: item.pimpinan || existing.pimpinan,
+          kuota: item.kuota !== undefined ? item.kuota : existing.kuota
+        });
+        imported.push(updated);
+      } else {
+        const newPlacement = await this.addTempatPkl(item);
+        imported.push(newPlacement);
+        await this.addAuditLog("Import Mitra", `Mengimpor mitra industri baru: ${newPlacement.nama} (Kuota: ${newPlacement.kuota})`);
+      }
     }
     return imported;
   },
@@ -414,6 +436,36 @@ export const pklService = {
       list.unshift(newEntry);
       localStorage.setItem("pkl_journals", JSON.stringify(list));
       return newEntry;
+    }
+  },
+
+  async updateJurnal(id: string, entry: Partial<JurnalEntry>): Promise<void> {
+    if (isFirebaseActive && db) {
+      const path = `journals/${id}`;
+      try {
+        const docRef = doc(db, "journals", id);
+        await updateDoc(docRef, {
+          ...entry,
+          status: "pending" as JournalStatus,
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, path);
+        throw error;
+      }
+    } else {
+      const stored = localStorage.getItem("pkl_journals");
+      if (stored) {
+        const list: JurnalEntry[] = JSON.parse(stored);
+        const index = list.findIndex((item) => item.id === id);
+        if (index !== -1) {
+          list[index] = {
+            ...list[index],
+            ...entry,
+            status: "pending" as JournalStatus,
+          };
+          localStorage.setItem("pkl_journals", JSON.stringify(list));
+        }
+      }
     }
   },
 
@@ -708,64 +760,12 @@ export const pklService = {
           list.push({ uid: docSnap.id, ...docSnap.data() } as UserProfile);
         });
 
-        // --- SAFE AUTOMATIC DEDUPLICATION OF STUDENT PROFILES ---
-        const uniqueList: UserProfile[] = [];
-        const seenEmails = new Set<string>();
-        const seenNisns = new Set<string>();
-        const seenNames = new Set<string>();
-        const duplicatesToDelete: string[] = [];
-
-        // Sort: We want to prioritize profiles that HAVE a valid tempatPkl / tempatPklId
-        // or have newer updates so we preserve active placements during merge.
+        // Sort: We want to prioritize newer updates so they appear organized
         const sortedList = [...list].sort((a, b) => {
-          const aHasPlace = (a.tempatPklId && a.tempatPklId !== "") ? 1 : 0;
-          const bHasPlace = (b.tempatPklId && b.tempatPklId !== "") ? 1 : 0;
-          if (aHasPlace !== bHasPlace) return bHasPlace - aHasPlace;
           return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
         });
 
-        for (const profile of sortedList) {
-          if (profile.role === "siswa") {
-            const emailKey = profile.email ? profile.email.toLowerCase().trim() : "";
-            const nisnKey = profile.nisn ? profile.nisn.trim() : "";
-            const nameKey = profile.name ? profile.name.toLowerCase().replace(/\s+/g, " ").trim() : "";
-
-            let isDuplicate = false;
-            if (emailKey && seenEmails.has(emailKey)) {
-              isDuplicate = true;
-            } else if (nisnKey && seenNisns.has(nisnKey)) {
-              isDuplicate = true;
-            } else if (nameKey && seenNames.has(nameKey)) {
-              isDuplicate = true;
-            }
-
-            if (isDuplicate) {
-              duplicatesToDelete.push(profile.uid);
-            } else {
-              if (emailKey) seenEmails.add(emailKey);
-              if (nisnKey) seenNisns.add(nisnKey);
-              if (nameKey) seenNames.add(nameKey);
-              uniqueList.push(profile);
-            }
-          } else {
-            uniqueList.push(profile);
-          }
-        }
-
-        // Safe fire-and-forget delete of duplicates in Firestore to clean up database corruption!
-        if (duplicatesToDelete.length > 0) {
-          console.warn(`🧹 Automatically cleaning up ${duplicatesToDelete.length} duplicate student records in Firestore...`);
-          const { doc, deleteDoc } = await import("firebase/firestore");
-          duplicatesToDelete.forEach(async (uid) => {
-            try {
-              await deleteDoc(doc(db, "profiles", uid));
-            } catch (err) {
-              console.error(`Failed to delete duplicate profile UID: ${uid}`, err);
-            }
-          });
-        }
-
-        return uniqueList;
+        return sortedList;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
         return [];
@@ -784,6 +784,7 @@ export const pklService = {
           kelas: "XII TKJ (Teknik Komputer & Jaringan)",
           tempatPkl: "Dinas Kominfo Ngada",
           tempatPklId: "p1",
+          pembimbingId: "pembimbing_sergius_456",
           tahunAjaran: "2025/2026 - Genap",
           createdAt: new Date().toISOString(),
         },
@@ -1063,6 +1064,14 @@ export const pklService = {
   },
 
   async deleteUserProfile(uid: string): Promise<void> {
+    // Record in deleted list (always keep local storage list of deleted profiles to filter hardcoded UI seeds)
+    const deletedStored = localStorage.getItem("pkl_deleted_profiles");
+    const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
+    if (!deletedList.includes(uid)) {
+      deletedList.push(uid);
+      localStorage.setItem("pkl_deleted_profiles", JSON.stringify(deletedList));
+    }
+
     if (isFirebaseActive && db) {
       const path = `profiles/${uid}`;
       try {
@@ -1073,14 +1082,6 @@ export const pklService = {
         handleFirestoreError(error, OperationType.DELETE, path);
       }
     } else {
-      // Record in deleted list
-      const deletedStored = localStorage.getItem("pkl_deleted_profiles");
-      const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
-      if (!deletedList.includes(uid)) {
-        deletedList.push(uid);
-        localStorage.setItem("pkl_deleted_profiles", JSON.stringify(deletedList));
-      }
-
       const stored = localStorage.getItem("pkl_custom_profiles");
       if (stored) {
         const list: UserProfile[] = JSON.parse(stored);

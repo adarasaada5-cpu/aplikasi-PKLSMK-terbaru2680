@@ -90,7 +90,12 @@ export const CatatanPembimbing: React.FC = () => {
       
       // If user is a teacher (pembimbing), they can only select/see their bimbingan students
       if (user.role === "pembimbing") {
-        studentProfiles = studentProfiles.filter(p => p.pembimbingId === user.uid);
+        studentProfiles = studentProfiles.filter(p => {
+          if (p.pembimbingId === user.uid) return true;
+          if (!p.pembimbingId) return false;
+          const pembimbing = allProfiles.find(prof => prof.uid === p.pembimbingId);
+          return pembimbing && pembimbing.email?.toLowerCase() === user.email?.toLowerCase();
+        });
       }
       setStudents(studentProfiles);
 

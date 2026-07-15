@@ -80,7 +80,12 @@ export const Monitoring: React.FC = () => {
       // Filter students
       let studentList = allProfiles.filter((p) => p.role === "siswa");
       if (user.role === "pembimbing") {
-        studentList = studentList.filter((p) => p.pembimbingId === user.uid);
+        studentList = studentList.filter((p) => {
+          if (p.pembimbingId === user.uid) return true;
+          if (!p.pembimbingId) return false;
+          const pembimbing = allProfiles.find(prof => prof.uid === p.pembimbingId);
+          return pembimbing && pembimbing.email?.toLowerCase() === user.email?.toLowerCase();
+        });
       }
       setStudents(studentList);
 
@@ -169,15 +174,77 @@ Guru Pembimbing,
 
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        setAlamatGps(`Koordinat Akurat: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)} (SMKS Sanjaya Bajawa Monitoring Area)`);
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lng);
+        setAlamatGps(`Memetakan koordinat (${lat.toFixed(6)}, ${lng.toFixed(6)})...`);
+
+        try {
+          // Try Nominatim OSM Reverse Geocoding with a 5-second timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+            {
+              signal: controller.signal,
+              headers: {
+                "Accept-Language": "id-ID,id;q=0.9,en;q=0.8"
+              }
+            }
+          );
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.display_name) {
+              setAlamatGps(`${data.display_name} (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+              setGpsLoading(false);
+              showToastMessage("Lokasi GPS berhasil diamankan!", "success");
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn("Nominatim reverse geocoding failed or timed out:", e);
+        }
+
+        setAlamatGps(`Koordinat Akurat: ${lat.toFixed(6)}, ${lng.toFixed(6)} (Bajawa, Ngada, NTT)`);
         setGpsLoading(false);
         showToastMessage("Lokasi GPS berhasil diamankan!", "success");
       },
-      (error) => {
+      async (error) => {
         console.error("GPS Error: ", error);
+        
+        try {
+          // Try IP Geolocation fallback
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
+          
+          const response = await fetch("https://ipapi.co/json/", { signal: controller.signal });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.latitude && data.longitude) {
+              const lat = data.latitude;
+              const lng = data.longitude;
+              const city = data.city || "Bajawa";
+              const region = data.region || "Nusa Tenggara Timur";
+              
+              setLatitude(lat);
+              setLongitude(lng);
+              setAlamatGps(`${city}, ${region}, Indonesia (Estimasi IP Geolocation)`);
+              setGpsLoading(false);
+              showToastMessage("Lokasi berhasil didapatkan secara estimasi!", "success");
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn("IP Geolocation fallback failed:", e);
+        }
+
         // Fallback simulated GPS coordinates for testing inside iframe environment
         const mockLat = -8.7946 + (Math.random() - 0.5) * 0.01;
         const mockLng = 120.9856 + (Math.random() - 0.5) * 0.01;
@@ -185,9 +252,9 @@ Guru Pembimbing,
         setLongitude(mockLng);
         setAlamatGps(`Presisi Estimasi: ${mockLat.toFixed(6)}, ${mockLng.toFixed(6)} (Bajawa, Ngada, NTT)`);
         setGpsLoading(false);
-        showToastMessage("Lokasi berhasil didapatkan secara estimasi (Iframe sandbox fallback).", "success");
+        showToastMessage("Lokasi berhasil didapatkan secara estimasi (Sandbox fallback).", "success");
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   };
 

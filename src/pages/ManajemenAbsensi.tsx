@@ -31,6 +31,7 @@ export const KehadiranManajemen: React.FC = () => {
   // Data States
   const [attendanceList, setAttendanceList] = useState<KehadiranEntry[]>([]);
   const [studentsList, setStudentsList] = useState<UserProfile[]>([]);
+  const [allProfilesList, setAllProfilesList] = useState<UserProfile[]>([]);
   const [schoolSettings, setSchoolSettings] = useState<SchoolSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -120,6 +121,7 @@ export const KehadiranManajemen: React.FC = () => {
       ]);
       setAttendanceList(attendance);
       setStudentsList(profiles.filter(p => p.role === "siswa"));
+      setAllProfilesList(profiles);
       setSchoolSettings(settings);
     } catch (error) {
       console.error("Gagal memuat data absensi manajemen:", error);
@@ -145,12 +147,18 @@ export const KehadiranManajemen: React.FC = () => {
         (supervisorPlaceName && studentPlaceName === supervisorPlaceName)
       );
     }
+    if (user?.role === "pembimbing") {
+      if (st.pembimbingId === user?.uid) return true;
+      if (!st.pembimbingId) return false;
+      const pembimbing = allProfilesList.find((p) => p.uid === st.pembimbingId);
+      return pembimbing && pembimbing.email?.toLowerCase() === user?.email?.toLowerCase();
+    }
     return true;
   });
 
   const openAddDialog = () => {
     setEditingEntry(null);
-    const availableStudents = user?.role === "industri" ? myCompanyStudents : studentsList;
+    const availableStudents = (user?.role === "industri" || user?.role === "pembimbing") ? myCompanyStudents : studentsList;
     if (availableStudents.length > 0) {
       setFormStudentId(availableStudents[0].uid);
     } else {
@@ -247,10 +255,10 @@ export const KehadiranManajemen: React.FC = () => {
 
   // Filter logic
   const filteredAttendance = attendanceList.filter((entry) => {
-    if (user?.role === "industri") {
-      const studentProfile = studentsList.find((s) => s.uid === entry.userId);
-      if (!studentProfile) return false;
+    const studentProfile = studentsList.find((s) => s.uid === entry.userId);
+    if (!studentProfile) return false;
 
+    if (user?.role === "industri") {
       const studentPlaceId = studentProfile.tempatPklId || "";
       const studentPlaceName = studentProfile.tempatPkl || "";
       const supervisorPlaceId = user?.tempatPklId || "";
@@ -260,6 +268,15 @@ export const KehadiranManajemen: React.FC = () => {
         (supervisorPlaceId && studentPlaceId === supervisorPlaceId) ||
         (supervisorPlaceName && studentPlaceName === supervisorPlaceName);
 
+      if (!isMatch) return false;
+    }
+
+    if (user?.role === "pembimbing") {
+      const isMatch = studentProfile.pembimbingId === user?.uid || (() => {
+        if (!studentProfile.pembimbingId) return false;
+        const pembimbing = allProfilesList.find((p) => p.uid === studentProfile.pembimbingId);
+        return pembimbing && pembimbing.email?.toLowerCase() === user?.email?.toLowerCase();
+      })();
       if (!isMatch) return false;
     }
 

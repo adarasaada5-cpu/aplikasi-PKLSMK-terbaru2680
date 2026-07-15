@@ -240,12 +240,14 @@ export const JurnalReview: React.FC = () => {
     }
   };
 
-  // Filter journals for the current supervisor if they are "industri"
+  // Filter journals for the current supervisor if they are "industri" or "pembimbing"
   const myCompanyJournals = journals.filter((j) => {
+    const studentProfile = profiles.find((p) => p.uid === j.userId);
+    if (!studentProfile) return false;
+
     if (user?.role === "industri") {
-      const studentProfile = profiles.find((p) => p.uid === j.userId);
-      const studentPlaceId = studentProfile?.tempatPklId || "";
-      const studentPlaceName = studentProfile?.tempatPkl || "";
+      const studentPlaceId = studentProfile.tempatPklId || "";
+      const studentPlaceName = studentProfile.tempatPkl || "";
       const supervisorPlaceId = user?.tempatPklId || "";
       const supervisorPlaceName = user?.tempatPkl || "";
 
@@ -255,6 +257,14 @@ export const JurnalReview: React.FC = () => {
         
       return isMatch;
     }
+
+    if (user?.role === "pembimbing") {
+      if (studentProfile.pembimbingId === user?.uid) return true;
+      if (!studentProfile.pembimbingId) return false;
+      const pembimbing = profiles.find((prof) => prof.uid === studentProfile.pembimbingId);
+      return pembimbing && pembimbing.email?.toLowerCase() === user?.email?.toLowerCase();
+    }
+
     return true;
   });
 
@@ -546,11 +556,28 @@ export const JurnalReview: React.FC = () => {
                 id="select-student-filter-journal"
               >
                 <option value="">-- Tampilkan Semua Data Siswa --</option>
-                {profiles.filter(p => p.role === "siswa").map(s => (
-                  <option key={s.uid} value={s.uid}>
-                    {s.name} ({s.kelas || "Tanpa Kelas"}) {s.tempatPkl ? `— ${s.tempatPkl}` : "— Belum PKL"}
-                  </option>
-                ))}
+                {profiles
+                  .filter((p) => {
+                    if (p.role !== "siswa") return false;
+                    if (user?.role === "pembimbing") {
+                      if (p.pembimbingId === user?.uid) return true;
+                      if (!p.pembimbingId) return false;
+                      const pembimbing = profiles.find((prof) => prof.uid === p.pembimbingId);
+                      return pembimbing && pembimbing.email?.toLowerCase() === user?.email?.toLowerCase();
+                    }
+                    if (user?.role === "industri") {
+                      return (
+                        (user.tempatPklId && p.tempatPklId === user.tempatPklId) ||
+                        (user.tempatPkl && p.tempatPkl === user.tempatPkl)
+                      );
+                    }
+                    return true;
+                  })
+                  .map((s) => (
+                    <option key={s.uid} value={s.uid}>
+                      {s.name} ({s.kelas || "Tanpa Kelas"}) {s.tempatPkl ? `— ${s.tempatPkl}` : "— Belum PKL"}
+                    </option>
+                  ))}
               </select>
             </div>
 
