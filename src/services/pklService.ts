@@ -4,6 +4,37 @@ import { onAuthStateChanged } from "firebase/auth";
 let isFirestoreBroken = false;
 let isFirebaseActive = originalIsFirebaseActive;
 
+// --- IN-MEMORY CACHE FOR FIRESTORE READ OPTIMIZATION ---
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const memoryCache: Record<string, CacheEntry<any>> = {};
+
+function getCachedData<T>(key: string, ttlMs: number): T | null {
+  const cached = memoryCache[key];
+  if (cached && Date.now() - cached.timestamp < ttlMs) {
+    return cached.data as T;
+  }
+  return null;
+}
+
+function setCachedData<T>(key: string, data: T): void {
+  memoryCache[key] = {
+    data,
+    timestamp: Date.now(),
+  };
+}
+
+function invalidateCachePrefix(prefix: string): void {
+  for (const key in memoryCache) {
+    if (key.startsWith(prefix)) {
+      delete memoryCache[key];
+    }
+  }
+}
+
 function markFirestoreBroken() {
   if (!isFirestoreBroken) {
     isFirestoreBroken = true;
@@ -218,6 +249,10 @@ export const pklService = {
   // --- TEMPAT PKL (PLACEMENTS) ---
   async getTempatPkl(): Promise<TempatPkl[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = "placements";
+      const cached = getCachedData<TempatPkl[]>(cacheKey, 600000); // 2 minutes TTL
+      if (cached) return cached;
+
       const path = "placements";
       try {
         const querySnapshot = await getDocs(collection(db, path));
@@ -237,6 +272,7 @@ export const pklService = {
             placements.push(pl);
           }
         }
+        setCachedData(cacheKey, placements);
         return placements;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -249,6 +285,7 @@ export const pklService = {
   },
 
   async addTempatPkl(entry: Omit<TempatPkl, "id">): Promise<TempatPkl> {
+    invalidateCachePrefix("placements");
     if (isFirebaseActive && db) {
       const path = "placements";
       try {
@@ -272,6 +309,7 @@ export const pklService = {
   },
 
   async updateTempatPkl(id: string, entry: Omit<TempatPkl, "id">): Promise<TempatPkl> {
+    invalidateCachePrefix("placements");
     if (isFirebaseActive && db) {
       const path = `placements/${id}`;
       try {
@@ -299,6 +337,7 @@ export const pklService = {
   },
 
   async deleteTempatPkl(id: string): Promise<void> {
+    invalidateCachePrefix("placements");
     if (isFirebaseActive && db) {
       const path = `placements/${id}`;
       try {
@@ -377,6 +416,10 @@ export const pklService = {
   // --- JURNAL (JOURNALS) ---
   async getJurnal(userId?: string): Promise<JurnalEntry[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = `journals_${userId || 'all'}`;
+      const cached = getCachedData<JurnalEntry[]>(cacheKey, 600000); // 15 seconds TTL
+      if (cached) return cached;
+
       const path = "journals";
       try {
         let q: any;
@@ -393,6 +436,7 @@ export const pklService = {
         if (userId) {
           entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         }
+        setCachedData(cacheKey, entries);
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -408,6 +452,7 @@ export const pklService = {
   },
 
   async createJurnal(entry: Omit<JurnalEntry, "id" | "status" | "createdAt">): Promise<JurnalEntry> {
+    invalidateCachePrefix("journals_");
     const newEntryData = {
       ...entry,
       status: "pending" as JournalStatus,
@@ -440,6 +485,7 @@ export const pklService = {
   },
 
   async updateJurnal(id: string, entry: Partial<JurnalEntry>): Promise<void> {
+    invalidateCachePrefix("journals_");
     if (isFirebaseActive && db) {
       const path = `journals/${id}`;
       try {
@@ -470,6 +516,7 @@ export const pklService = {
   },
 
   async updateJurnalStatus(id: string, status: JournalStatus, comment?: string): Promise<void> {
+    invalidateCachePrefix("journals_");
     if (isFirebaseActive && db) {
       const path = `journals/${id}`;
       try {
@@ -499,6 +546,7 @@ export const pklService = {
   },
 
   async deleteJurnal(id: string): Promise<void> {
+    invalidateCachePrefix("journals_");
     if (isFirebaseActive && db) {
       const path = `journals/${id}`;
       try {
@@ -518,6 +566,7 @@ export const pklService = {
   },
 
   async importJournals(entries: Array<Omit<JurnalEntry, "id"> & { id?: string }>): Promise<void> {
+    invalidateCachePrefix("journals_");
     const listToSave = entries.map(entry => ({
       ...entry,
       id: entry.id || `j_import_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
@@ -554,6 +603,10 @@ export const pklService = {
   // --- KEHADIRAN (ATTENDANCE) ---
   async getKehadiran(userId?: string): Promise<KehadiranEntry[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = `attendance_${userId || 'all'}`;
+      const cached = getCachedData<KehadiranEntry[]>(cacheKey, 600000); // 15 seconds TTL
+      if (cached) return cached;
+
       const path = "attendance";
       try {
         let q: any;
@@ -570,6 +623,7 @@ export const pklService = {
         if (userId) {
           entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         }
+        setCachedData(cacheKey, entries);
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -593,6 +647,7 @@ export const pklService = {
     longitude?: number,
     alamatGps?: string
   ): Promise<KehadiranEntry> {
+    invalidateCachePrefix("attendance_");
     const todayStr = new Date().toISOString().split("T")[0];
     const nowTime = new Date().toTimeString().split(" ")[0].substring(0, 5); // "HH:MM"
 
@@ -653,6 +708,7 @@ export const pklService = {
   },
 
   async clockOut(userId: string): Promise<KehadiranEntry> {
+    invalidateCachePrefix("attendance_");
     const todayStr = new Date().toISOString().split("T")[0];
     const nowTime = new Date().toTimeString().split(" ")[0].substring(0, 5); // "HH:MM"
 
@@ -700,6 +756,7 @@ export const pklService = {
   },
 
   async saveKehadiranManual(entry: KehadiranEntry): Promise<KehadiranEntry> {
+    invalidateCachePrefix("attendance_");
     if (isFirebaseActive && db) {
       const path = `attendance/${entry.id}`;
       try {
@@ -729,6 +786,7 @@ export const pklService = {
   },
 
   async deleteKehadiran(id: string): Promise<void> {
+    invalidateCachePrefix("attendance_");
     if (isFirebaseActive && db) {
       const path = `attendance/${id}`;
       try {
@@ -752,6 +810,10 @@ export const pklService = {
   // --- USER PROFILES & ACCOUNTS MANAGEMENT ---
   async getAllUserProfiles(): Promise<UserProfile[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = "profiles";
+      const cached = getCachedData<UserProfile[]>(cacheKey, 3600000); // 30 seconds TTL
+      if (cached) return cached;
+
       const path = "profiles";
       try {
         const querySnapshot = await getDocs(collection(db, path));
@@ -765,6 +827,7 @@ export const pklService = {
           return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
         });
 
+        setCachedData(cacheKey, sortedList);
         return sortedList;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -877,6 +940,7 @@ export const pklService = {
   },
 
   async saveUserProfile(profile: UserProfile): Promise<UserProfile> {
+    invalidateCachePrefix("profiles");
     if (isFirebaseActive && db) {
       const path = `profiles/${profile.uid}`;
       try {
@@ -1064,6 +1128,7 @@ export const pklService = {
   },
 
   async deleteUserProfile(uid: string): Promise<void> {
+    invalidateCachePrefix("profiles");
     // Record in deleted list (always keep local storage list of deleted profiles to filter hardcoded UI seeds)
     const deletedStored = localStorage.getItem("pkl_deleted_profiles");
     const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
@@ -1138,13 +1203,20 @@ export const pklService = {
     };
 
     if (isFirebaseActive && db) {
+      const cacheKey = "school_settings";
+      const cached = getCachedData<SchoolSettings>(cacheKey, 3600000); // 3 minutes TTL
+      if (cached) return cached;
+
       const path = "settings/school";
       try {
         const snap = await getDoc(doc(db, "settings", "school"));
         if (snap.exists()) {
-          return { ...defaultSet, ...snap.data() } as SchoolSettings;
+          const data = { ...defaultSet, ...snap.data() } as SchoolSettings;
+          setCachedData(cacheKey, data);
+          return data;
         }
         await setDoc(doc(db, "settings", "school"), defaultSet);
+        setCachedData(cacheKey, defaultSet);
         return defaultSet;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -1161,6 +1233,7 @@ export const pklService = {
   },
 
   async updateSchoolSettings(settings: SchoolSettings): Promise<SchoolSettings> {
+    invalidateCachePrefix("school_settings");
     if (isFirebaseActive && db) {
       const path = "settings/school";
       try {
@@ -1181,6 +1254,10 @@ export const pklService = {
   // --- PERFORMANCE APPRAISAL (PENILAIAN PKL) ---
   async getPenilaian(siswaId?: string): Promise<PenilaianPkl[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = `penilaian_${siswaId || 'all'}`;
+      const cached = getCachedData<PenilaianPkl[]>(cacheKey, 15000); // 15 seconds TTL
+      if (cached) return cached;
+
       const path = "assessments";
       try {
         let q: any;
@@ -1197,6 +1274,7 @@ export const pklService = {
         if (siswaId) {
           entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         }
+        setCachedData(cacheKey, entries);
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -1211,6 +1289,7 @@ export const pklService = {
   },
 
   async submitPenilaian(entry: Partial<PenilaianPkl> & { siswaId: string; siswaName: string }): Promise<PenilaianPkl> {
+    invalidateCachePrefix("penilaian_");
     // 1. Get existing penilaian for this student
     const existingList = await this.getPenilaian(entry.siswaId);
     const existing = existingList.length > 0 ? existingList[0] : null;
@@ -1324,6 +1403,7 @@ export const pklService = {
   },
 
   async deletePenilaian(id: string): Promise<void> {
+    invalidateCachePrefix("penilaian_");
     if (isFirebaseActive && db) {
       const path = `assessments/${id}`;
       try {
@@ -1345,6 +1425,10 @@ export const pklService = {
   // --- AUDIT LOGS ---
   async getAuditLogs(): Promise<AuditLog[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = "audit_logs";
+      const cached = getCachedData<AuditLog[]>(cacheKey, 600000); // 30 seconds TTL
+      if (cached) return cached;
+
       const path = "audit_logs";
       try {
         const q = query(collection(db, path), orderBy("timestamp", "desc"));
@@ -1353,6 +1437,7 @@ export const pklService = {
         querySnapshot.forEach((docSnap) => {
           entries.push({ id: docSnap.id, ...docSnap.data() } as AuditLog);
         });
+        setCachedData(cacheKey, entries);
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -1365,6 +1450,7 @@ export const pklService = {
   },
 
   async addAuditLog(action: string, details: string): Promise<AuditLog> {
+    invalidateCachePrefix("audit_logs");
     const userProfileStr = localStorage.getItem("pkl_current_user");
     const currentUser = userProfileStr ? JSON.parse(userProfileStr) : null;
     
@@ -1400,6 +1486,10 @@ export const pklService = {
   // --- NOTIFICATIONS ---
   async getNotifications(userId?: string): Promise<SystemNotification[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = `notifications_${userId || 'all'}`;
+      const cached = getCachedData<SystemNotification[]>(cacheKey, 600000); // 20 seconds TTL
+      if (cached) return cached;
+
       const path = "notifications";
       try {
         let q: any;
@@ -1416,6 +1506,7 @@ export const pklService = {
         if (userId) {
           list.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         }
+        setCachedData(cacheKey, list);
         return list;
       } catch (error) {
         console.error("Failed to get notifications from Firestore:", error);
@@ -1437,6 +1528,7 @@ export const pklService = {
   },
 
   async createNotification(noti: Omit<SystemNotification, "id">): Promise<SystemNotification> {
+    invalidateCachePrefix("notifications_");
     const newNoti = {
       ...noti,
       createdAt: new Date().toISOString(),
@@ -1465,6 +1557,7 @@ export const pklService = {
   },
 
   async markNotificationRead(id: string): Promise<void> {
+    invalidateCachePrefix("notifications_");
     if (isFirebaseActive && db) {
       const path = `notifications/${id}`;
       try {
@@ -1489,6 +1582,10 @@ export const pklService = {
   // --- TEACHER NOTES (CATATAN PEMBIMBING) ---
   async getTeacherNotes(userRole?: string, userId?: string): Promise<TeacherNote[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = `teacher_notes_${userRole || 'any'}_${userId || 'any'}`;
+      const cached = getCachedData<TeacherNote[]>(cacheKey, 600000); // 15 seconds TTL
+      if (cached) return cached;
+
       const path = "teacher_notes";
       try {
         let q: any;
@@ -1506,6 +1603,7 @@ export const pklService = {
         entries = entries.filter(note => note.isDeleted === false);
         // Sort in-memory
         entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+        setCachedData(cacheKey, entries);
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -1523,6 +1621,7 @@ export const pklService = {
   },
 
   async createTeacherNote(entry: Omit<TeacherNote, "id" | "createdAt" | "updatedAt" | "isDeleted">): Promise<TeacherNote> {
+    invalidateCachePrefix("teacher_notes_");
     const newEntryData = {
       ...entry,
       createdAt: new Date().toISOString(),
@@ -1586,6 +1685,7 @@ export const pklService = {
   },
 
   async updateTeacherNote(id: string, entry: Partial<TeacherNote>): Promise<TeacherNote> {
+    invalidateCachePrefix("teacher_notes_");
     const updatedData = {
       ...entry,
       updatedAt: new Date().toISOString(),
@@ -1629,6 +1729,10 @@ export const pklService = {
   // --- MONITORING METHODS ---
   async getMonitorings(userRole?: string, userId?: string): Promise<MonitoringEntry[]> {
     if (isFirebaseActive && db) {
+      const cacheKey = `monitorings_${userRole || 'any'}_${userId || 'any'}`;
+      const cached = getCachedData<MonitoringEntry[]>(cacheKey, 600000); // 15 seconds TTL
+      if (cached) return cached;
+
       const path = "monitorings";
       try {
         let q: any;
@@ -1646,6 +1750,7 @@ export const pklService = {
         entries = entries.filter(mon => mon.isDeleted === false);
         // Sort in-memory
         entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+        setCachedData(cacheKey, entries);
         return entries;
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, path);
@@ -1663,6 +1768,7 @@ export const pklService = {
   },
 
   async createMonitoring(entry: Omit<MonitoringEntry, "id" | "createdAt" | "isDeleted">): Promise<MonitoringEntry> {
+    invalidateCachePrefix("monitorings_");
     const newEntryData = {
       ...entry,
       createdAt: new Date().toISOString(),
@@ -1723,6 +1829,7 @@ export const pklService = {
   },
 
   async updateMonitoring(id: string, entry: Partial<MonitoringEntry>): Promise<MonitoringEntry> {
+    invalidateCachePrefix("monitorings_");
     if (isFirebaseActive && db) {
       const path = `monitorings/${id}`;
       try {
