@@ -142,104 +142,154 @@ const DEFAULT_PLACEMENTS: TempatPkl[] = [
 ];
 
 // Local fallback initialization
+const DEFAULT_PROFILES: UserProfile[] = [
+  {
+    uid: "siswa_sanjaya_123",
+    name: "Siswa Sanjaya Bajawa",
+    email: "siswa@smksanjaya.sch.id",
+    role: "siswa" as UserRole,
+    nisn: "0081234567",
+    kelas: "XII TKJ (Teknik Komputer & Jaringan)",
+    tempatPkl: "Dinas Kominfo Ngada",
+    tempatPklId: "p1",
+    pembimbingId: "pembimbing_sergius_456",
+    tahunAjaran: "2025/2026 - Genap",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    uid: "pembimbing_sergius_456",
+    name: "Drs. Sergius Nono",
+    email: "sergiusnono80@guru.smk.belajar.id",
+    role: "pembimbing" as UserRole,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    uid: "penyelia_mitra_999",
+    name: "Yosef Sanjaya (Penyelia)",
+    email: "penyelia@mitra.com",
+    role: "industri" as UserRole,
+    tempatPkl: "Sanjaya Motor Bajawa",
+    tempatPklId: "p3",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    uid: "admin_pkl_789",
+    name: "Admin PKL SMKS Sanjaya",
+    email: "wasosergio@gmail.com",
+    role: "admin" as UserRole,
+    createdAt: new Date().toISOString(),
+  }
+];
+
+const DEFAULT_JOURNALS: JurnalEntry[] = [
+  {
+    id: "j1",
+    userId: "siswa_sanjaya_123",
+    userName: "Siswa Sanjaya Bajawa",
+    tanggal: "2026-07-02",
+    kegiatan: "Instalasi dan konfigurasi jaringan LAN di ruang Bidang Humas.",
+    kendala: "Kabel UTP sempat terputus karena terhimpit meja.",
+    solusi: "Melakukan crimping ulang konektor RJ-45 dan merapikan jalur kabel.",
+    status: "approved" as JournalStatus,
+    pembimbingComment: "Bagus, pastikan kabel selalu dilindungi ducting.",
+    createdAt: new Date("2026-07-02T16:00:00.000Z").toISOString(),
+  },
+  {
+    id: "j2",
+    userId: "siswa_sanjaya_123",
+    userName: "Siswa Sanjaya Bajawa",
+    tanggal: "2026-07-03",
+    kegiatan: "Melakukan troubleshooting PC staf Kominfo yang tidak bisa booting.",
+    kendala: "RAM kotor dan power supply berdebu tebal.",
+    solusi: "Membersihkan pin RAM dengan penghapus pensil dan meniup debu PSU.",
+    status: "pending" as JournalStatus,
+    createdAt: new Date("2026-07-03T16:00:00.000Z").toISOString(),
+  },
+];
+
+const DEFAULT_ATTENDANCE: KehadiranEntry[] = [
+  {
+    id: "a1",
+    userId: "siswa_sanjaya_123",
+    userName: "Siswa Sanjaya Bajawa",
+    tanggal: "2026-07-02",
+    jamMasuk: "07:30",
+    jamPulang: "16:00",
+    status: "hadir" as AttendanceStatus,
+    createdAt: new Date("2026-07-02T07:30:00.000Z").toISOString(),
+  },
+  {
+    id: "a2",
+    userId: "siswa_sanjaya_123",
+    userName: "Siswa Sanjaya Bajawa",
+    tanggal: "2026-07-03",
+    jamMasuk: "07:25",
+    jamPulang: "16:05",
+    status: "hadir" as AttendanceStatus,
+    createdAt: new Date("2026-07-03T07:25:00.000Z").toISOString(),
+  },
+];
+
+const DEFAULT_TEACHER_NOTES: TeacherNote[] = [
+  {
+    id: "n1",
+    studentId: "siswa_sanjaya_123",
+    studentName: "Siswa Sanjaya Bajawa",
+    studentClass: "XII TKJ (Teknik Komputer & Jaringan)",
+    teacherId: "pembimbing_sergius_456",
+    teacherName: "Drs. Sergius Nono",
+    title: "Monitoring Minggu Ke-2",
+    category: "Monitoring",
+    status: "Baik",
+    content: "Siswa menunjukkan perkembangan yang sangat baik dalam memahami instalasi jaringan dan konfigurasi LAN di tempat PKL.",
+    attachmentUrl: null,
+    attachmentName: null,
+    createdAt: new Date("2026-07-05T09:00:00.000Z").toISOString(),
+    updatedAt: new Date("2026-07-05T09:00:00.000Z").toISOString(),
+    createdBy: "pembimbing_sergius_456",
+    isDeleted: false,
+  },
+  {
+    id: "n2",
+    studentId: "siswa_sanjaya_123",
+    studentName: "Siswa Sanjaya Bajawa",
+    studentClass: "XII TKJ (Teknik Komputer & Jaringan)",
+    teacherId: "pembimbing_sergius_456",
+    teacherName: "Drs. Sergius Nono",
+    title: "Prestasi dalam Pemecahan Masalah",
+    category: "Prestasi",
+    status: "Sangat Baik",
+    content: "Berhasil menyelesaikan masalah troubleshooting PC staf Kominfo yang mati total dengan sangat mandiri.",
+    attachmentUrl: null,
+    attachmentName: null,
+    createdAt: new Date("2026-07-06T11:30:00.000Z").toISOString(),
+    updatedAt: new Date("2026-07-06T11:30:00.000Z").toISOString(),
+    createdBy: "pembimbing_sergius_456",
+    isDeleted: false,
+  }
+];
+
+const DEFAULT_NOTIFICATIONS: SystemNotification[] = [
+  { id: "noti_1", title: "Absensi harian baru", content: "Absensi harian baru diajukan oleh Siswa", time: "5 mnt yang lalu", createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(), read: false, userId: "admin" },
+  { id: "noti_2", title: "Laporan jurnal harian", content: "Laporan jurnal harian masuk untuk ditinjau", time: "1 jam yang lalu", createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(), read: false, userId: "pembimbing_sergius_456" },
+  { id: "noti_3", title: "Mitra Baru", content: "Mitra Baru: Bank NTT Cabang Bajawa aktif", time: "1 hari yang lalu", createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), read: true, userId: "all" },
+];
+
 const initLocalStorage = () => {
   if (!localStorage.getItem("pkl_placements")) {
     localStorage.setItem("pkl_placements", JSON.stringify(DEFAULT_PLACEMENTS));
   }
   if (!localStorage.getItem("pkl_journals")) {
-    // Seed standard journals
-    const initialJournals: JurnalEntry[] = [
-      {
-        id: "j1",
-        userId: "siswa_sanjaya_123",
-        userName: "Siswa Sanjaya Bajawa",
-        tanggal: "2026-07-02",
-        kegiatan: "Instalasi dan konfigurasi jaringan LAN di ruang Bidang Humas.",
-        kendala: "Kabel UTP sempat terputus karena terhimpit meja.",
-        solusi: "Melakukan crimping ulang konektor RJ-45 dan merapikan jalur kabel.",
-        status: "approved",
-        pembimbingComment: "Bagus, pastikan kabel selalu dilindungi ducting.",
-        createdAt: new Date("2026-07-02T16:00:00.000Z").toISOString(),
-      },
-      {
-        id: "j2",
-        userId: "siswa_sanjaya_123",
-        userName: "Siswa Sanjaya Bajawa",
-        tanggal: "2026-07-03",
-        kegiatan: "Melakukan troubleshooting PC staf Kominfo yang tidak bisa booting.",
-        kendala: "RAM kotor dan power supply berdebu tebal.",
-        solusi: "Membersihkan pin RAM dengan penghapus pensil dan meniup debu PSU.",
-        status: "pending",
-        createdAt: new Date("2026-07-03T16:00:00.000Z").toISOString(),
-      },
-    ];
-    localStorage.setItem("pkl_journals", JSON.stringify(initialJournals));
+    localStorage.setItem("pkl_journals", JSON.stringify(DEFAULT_JOURNALS));
   }
   if (!localStorage.getItem("pkl_attendance")) {
-    const initialAttendance: KehadiranEntry[] = [
-      {
-        id: "a1",
-        userId: "siswa_sanjaya_123",
-        userName: "Siswa Sanjaya Bajawa",
-        tanggal: "2026-07-02",
-        jamMasuk: "07:30",
-        jamPulang: "16:00",
-        status: "hadir",
-        createdAt: new Date("2026-07-02T07:30:00.000Z").toISOString(),
-      },
-      {
-        id: "a2",
-        userId: "siswa_sanjaya_123",
-        userName: "Siswa Sanjaya Bajawa",
-        tanggal: "2026-07-03",
-        jamMasuk: "07:25",
-        jamPulang: "16:05",
-        status: "hadir",
-        createdAt: new Date("2026-07-03T07:25:00.000Z").toISOString(),
-      },
-    ];
-    localStorage.setItem("pkl_attendance", JSON.stringify(initialAttendance));
+    localStorage.setItem("pkl_attendance", JSON.stringify(DEFAULT_ATTENDANCE));
   }
   if (!localStorage.getItem("pkl_teacher_notes")) {
-    const initialNotes: TeacherNote[] = [
-      {
-        id: "n1",
-        studentId: "siswa_sanjaya_123",
-        studentName: "Siswa Sanjaya Bajawa",
-        studentClass: "XII TKJ (Teknik Komputer & Jaringan)",
-        teacherId: "pembimbing_sergius_456",
-        teacherName: "Drs. Sergius Nono",
-        title: "Monitoring Minggu Ke-2",
-        category: "Monitoring",
-        status: "Baik",
-        content: "Siswa menunjukkan perkembangan yang sangat baik dalam memahami instalasi jaringan dan konfigurasi LAN di tempat PKL.",
-        attachmentUrl: null,
-        attachmentName: null,
-        createdAt: new Date("2026-07-05T09:00:00.000Z").toISOString(),
-        updatedAt: new Date("2026-07-05T09:00:00.000Z").toISOString(),
-        createdBy: "pembimbing_sergius_456",
-        isDeleted: false,
-      },
-      {
-        id: "n2",
-        studentId: "siswa_sanjaya_123",
-        studentName: "Siswa Sanjaya Bajawa",
-        studentClass: "XII TKJ (Teknik Komputer & Jaringan)",
-        teacherId: "pembimbing_sergius_456",
-        teacherName: "Drs. Sergius Nono",
-        title: "Prestasi dalam Pemecahan Masalah",
-        category: "Prestasi",
-        status: "Sangat Baik",
-        content: "Berhasil menyelesaikan masalah troubleshooting PC staf Kominfo yang mati total dengan sangat mandiri.",
-        attachmentUrl: null,
-        attachmentName: null,
-        createdAt: new Date("2026-07-06T11:30:00.000Z").toISOString(),
-        updatedAt: new Date("2026-07-06T11:30:00.000Z").toISOString(),
-        createdBy: "pembimbing_sergius_456",
-        isDeleted: false,
-      }
-    ];
-    localStorage.setItem("pkl_teacher_notes", JSON.stringify(initialNotes));
+    localStorage.setItem("pkl_teacher_notes", JSON.stringify(DEFAULT_TEACHER_NOTES));
+  }
+  if (!localStorage.getItem("pkl_notifications")) {
+    localStorage.setItem("pkl_notifications", JSON.stringify(DEFAULT_NOTIFICATIONS));
   }
 };
 
@@ -250,7 +300,7 @@ export const pklService = {
   async getTempatPkl(): Promise<TempatPkl[]> {
     if (isFirebaseActive && db) {
       const cacheKey = "placements";
-      const cached = getCachedData<TempatPkl[]>(cacheKey, 600000); // 2 minutes TTL
+      const cached = getCachedData<TempatPkl[]>(cacheKey, 120000); // 2 minutes TTL
       if (cached) return cached;
 
       const path = "placements";
@@ -417,7 +467,7 @@ export const pklService = {
   async getJurnal(userId?: string): Promise<JurnalEntry[]> {
     if (isFirebaseActive && db) {
       const cacheKey = `journals_${userId || 'all'}`;
-      const cached = getCachedData<JurnalEntry[]>(cacheKey, 600000); // 15 seconds TTL
+      const cached = getCachedData<JurnalEntry[]>(cacheKey, 15000); // 15 seconds TTL
       if (cached) return cached;
 
       const path = "journals";
@@ -433,6 +483,16 @@ export const pklService = {
         querySnapshot.forEach((docSnap) => {
           entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as JurnalEntry);
         });
+
+        if (entries.length === 0 && !userId) {
+          // Auto-seed default journals in Firestore if empty
+          for (const journal of DEFAULT_JOURNALS) {
+            const { id, ...data } = journal;
+            await setDoc(doc(db, "journals", id), data);
+            entries.push(journal);
+          }
+        }
+
         if (userId) {
           entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         }
@@ -604,7 +664,7 @@ export const pklService = {
   async getKehadiran(userId?: string): Promise<KehadiranEntry[]> {
     if (isFirebaseActive && db) {
       const cacheKey = `attendance_${userId || 'all'}`;
-      const cached = getCachedData<KehadiranEntry[]>(cacheKey, 600000); // 15 seconds TTL
+      const cached = getCachedData<KehadiranEntry[]>(cacheKey, 15000); // 15 seconds TTL
       if (cached) return cached;
 
       const path = "attendance";
@@ -620,6 +680,16 @@ export const pklService = {
         querySnapshot.forEach((docSnap) => {
           entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as KehadiranEntry);
         });
+
+        if (entries.length === 0 && !userId) {
+          // Auto-seed default attendance in Firestore if empty
+          for (const att of DEFAULT_ATTENDANCE) {
+            const { id, ...data } = att;
+            await setDoc(doc(db, "attendance", id), data);
+            entries.push(att);
+          }
+        }
+
         if (userId) {
           entries.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
         }
@@ -811,7 +881,7 @@ export const pklService = {
   async getAllUserProfiles(): Promise<UserProfile[]> {
     if (isFirebaseActive && db) {
       const cacheKey = "profiles";
-      const cached = getCachedData<UserProfile[]>(cacheKey, 3600000); // 30 seconds TTL
+      const cached = getCachedData<UserProfile[]>(cacheKey, 30000); // 30 seconds TTL
       if (cached) return cached;
 
       const path = "profiles";
@@ -821,6 +891,15 @@ export const pklService = {
         querySnapshot.forEach((docSnap) => {
           list.push({ uid: docSnap.id, ...docSnap.data() } as UserProfile);
         });
+
+        if (list.length === 0) {
+          // Auto-seed default profiles in Firestore if empty
+          for (const profile of DEFAULT_PROFILES) {
+            const { uid, ...data } = profile;
+            await setDoc(doc(db, "profiles", uid), data);
+            list.push(profile);
+          }
+        }
 
         // Sort: We want to prioritize newer updates so they appear organized
         const sortedList = [...list].sort((a, b) => {
@@ -1192,7 +1271,7 @@ export const pklService = {
   // --- SCHOOL SETTINGS (TAHUN AJARAN / SEMESTER) ---
   async getSchoolSettings(): Promise<SchoolSettings> {
     const defaultSet: SchoolSettings = {
-      tahunAjaranAktif: "2025/2026 - Genap",
+      tahunAjaranAktif: "2026/2027 - Ganjil",
       kkmKehadiran: 80,
       namaSekolah: "SMKS Sanjaya Bajawa",
       logoSekolah: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=200&auto=format&fit=crop",
@@ -1204,7 +1283,7 @@ export const pklService = {
 
     if (isFirebaseActive && db) {
       const cacheKey = "school_settings";
-      const cached = getCachedData<SchoolSettings>(cacheKey, 3600000); // 3 minutes TTL
+      const cached = getCachedData<SchoolSettings>(cacheKey, 180000); // 3 minutes TTL
       if (cached) return cached;
 
       const path = "settings/school";
@@ -1426,7 +1505,7 @@ export const pklService = {
   async getAuditLogs(): Promise<AuditLog[]> {
     if (isFirebaseActive && db) {
       const cacheKey = "audit_logs";
-      const cached = getCachedData<AuditLog[]>(cacheKey, 600000); // 30 seconds TTL
+      const cached = getCachedData<AuditLog[]>(cacheKey, 30000); // 30 seconds TTL
       if (cached) return cached;
 
       const path = "audit_logs";
@@ -1487,38 +1566,41 @@ export const pklService = {
   async getNotifications(userId?: string): Promise<SystemNotification[]> {
     if (isFirebaseActive && db) {
       const cacheKey = `notifications_${userId || 'all'}`;
-      const cached = getCachedData<SystemNotification[]>(cacheKey, 600000); // 20 seconds TTL
+      const cached = getCachedData<SystemNotification[]>(cacheKey, 20000); // 20 seconds TTL
       if (cached) return cached;
 
       const path = "notifications";
       try {
-        let q: any;
-        if (userId) {
-          q = query(collection(db, path), where("userId", "==", userId));
-        } else {
-          q = query(collection(db, path), orderBy("createdAt", "desc"));
-        }
-        const querySnapshot = await getDocs(q);
-        const list: SystemNotification[] = [];
+        const querySnapshot = await getDocs(collection(db, path));
+        let list: SystemNotification[] = [];
         querySnapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...(docSnap.data() as any) } as SystemNotification);
         });
-        if (userId) {
-          list.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+
+        if (list.length === 0) {
+          // Auto-seed default notifications in Firestore if empty
+          for (const noti of DEFAULT_NOTIFICATIONS) {
+            const { id, ...data } = noti;
+            await setDoc(doc(db, path, id), data);
+            list.push(noti);
+          }
         }
-        setCachedData(cacheKey, list);
-        return list;
+
+        const filtered = userId 
+          ? list.filter(n => n.userId === userId || n.userId === "all" || (userId === "admin_pkl_789" && n.userId === "admin")) 
+          : list;
+
+        filtered.sort((a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime());
+
+        setCachedData(cacheKey, filtered);
+        return filtered;
       } catch (error) {
         console.error("Failed to get notifications from Firestore:", error);
         return [];
       }
     } else {
       const stored = localStorage.getItem("pkl_notifications");
-      const list: SystemNotification[] = stored ? JSON.parse(stored) : [
-        { id: "1", title: "Absensi harian baru", content: "Absensi harian baru diajukan oleh Siswa", time: "5 mnt yang lalu", read: false, userId: "admin" },
-        { id: "2", title: "Laporan jurnal harian", content: "Laporan jurnal harian masuk untuk ditinjau", time: "1 jam yang lalu", read: false, userId: "pembimbing_sergius_456" },
-        { id: "3", title: "Mitra Baru", content: "Mitra Baru: Bank NTT Cabang Bajawa aktif", time: "1 hari yang lalu", read: true, userId: "all" },
-      ];
+      const list: SystemNotification[] = stored ? JSON.parse(stored) : DEFAULT_NOTIFICATIONS;
       if (!stored) {
         localStorage.setItem("pkl_notifications", JSON.stringify(list));
       }
@@ -1583,7 +1665,7 @@ export const pklService = {
   async getTeacherNotes(userRole?: string, userId?: string): Promise<TeacherNote[]> {
     if (isFirebaseActive && db) {
       const cacheKey = `teacher_notes_${userRole || 'any'}_${userId || 'any'}`;
-      const cached = getCachedData<TeacherNote[]>(cacheKey, 600000); // 15 seconds TTL
+      const cached = getCachedData<TeacherNote[]>(cacheKey, 15000); // 15 seconds TTL
       if (cached) return cached;
 
       const path = "teacher_notes";
@@ -1599,6 +1681,16 @@ export const pklService = {
         querySnapshot.forEach((docSnap) => {
           entries.push({ id: docSnap.id, ...(docSnap.data() as any) } as TeacherNote);
         });
+
+        if (entries.length === 0 && !userId) {
+          // Auto-seed default teacher notes in Firestore if empty
+          for (const note of DEFAULT_TEACHER_NOTES) {
+            const { id, ...data } = note;
+            await setDoc(doc(db, "teacher_notes", id), data);
+            entries.push(note);
+          }
+        }
+
         // Filter out deleted in-memory
         entries = entries.filter(note => note.isDeleted === false);
         // Sort in-memory
@@ -1730,7 +1822,7 @@ export const pklService = {
   async getMonitorings(userRole?: string, userId?: string): Promise<MonitoringEntry[]> {
     if (isFirebaseActive && db) {
       const cacheKey = `monitorings_${userRole || 'any'}_${userId || 'any'}`;
-      const cached = getCachedData<MonitoringEntry[]>(cacheKey, 600000); // 15 seconds TTL
+      const cached = getCachedData<MonitoringEntry[]>(cacheKey, 15000); // 15 seconds TTL
       if (cached) return cached;
 
       const path = "monitorings";
