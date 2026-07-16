@@ -202,8 +202,8 @@ export const ManajemenSiswa: React.FC = () => {
           nisn: formNisn.trim(),
           kelas: formKelas.trim(),
           tempatPkl: selectedPlacementName,
-          tempatPklId: formTempatPklId || "",
-          pembimbingId: formPembimbingId || "",
+          tempatPklId: formTempatPklId || undefined,
+          pembimbingId: formPembimbingId || undefined,
           tahunAjaran: activeSettings.tahunAjaranAktif,
           password: formPassword.trim() || "PasswordSanjaya123", // fallback default
           createdAt: new Date().toISOString()
@@ -803,7 +803,15 @@ export const ManajemenSiswa: React.FC = () => {
                           {siswa.name.substring(0, 1)}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-gray-900 dark:text-gray-100 truncate">{siswa.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-gray-900 dark:text-gray-100 truncate">{siswa.name}</span>
+                            {siswa.lastActive && (new Date().getTime() - new Date(siswa.lastActive).getTime() < 5 * 60 * 1000) && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+                                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                Online
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5">
                             <Mail className="w-3 h-3" /> {siswa.email}
                           </span>

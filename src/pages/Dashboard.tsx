@@ -16,6 +16,10 @@ import {
   TrendingUp,
   UserCheck,
   Sparkles,
+  Search,
+  Activity,
+  Wifi,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -28,6 +32,23 @@ export const Dashboard: React.FC = () => {
   const [teacherNotes, setTeacherNotes] = useState<TeacherNote[]>([]);
   const [schoolSettings, setSchoolSettings] = useState<SchoolSettings | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // States for live student activity tracker
+  const [activeSearch, setActiveSearch] = useState("");
+  const [activeTabFilter, setActiveTabFilter] = useState<"semua" | "online" | "offline">("semua");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefreshProfiles = async () => {
+    setRefreshing(true);
+    try {
+      const uList = await pklService.getAllUserProfiles();
+      setProfiles(uList);
+    } catch (e) {
+      console.error("Failed to refresh profiles:", e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -411,6 +432,218 @@ export const Dashboard: React.FC = () => {
     );
   };
 
+  // Format last active relative time in Indonesian
+  const formatLastActive = (isoString?: string): { label: string; isOnline: boolean } => {
+    if (!isoString) return { label: "Offline (Belum aktif)", isOnline: false };
+    const diffMs = new Date().getTime() - new Date(isoString).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    // Consider online if active in the last 5 minutes
+    const isOnline = diffMins < 5;
+    
+    if (diffMins < 1) {
+      return { label: "Online (Aktif baru saja)", isOnline: true };
+    }
+    if (diffMins < 5) {
+      return { label: `Online (Aktif ${diffMins}m yang lalu)`, isOnline: true };
+    }
+    if (diffMins < 60) {
+      return { label: `Offline (Terakhir aktif ${diffMins} menit lalu)`, isOnline: false };
+    }
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) {
+      return { label: `Offline (Terakhir aktif ${diffHours} jam lalu)`, isOnline: false };
+    }
+    const diffDays = Math.floor(diffHours / 24);
+    return { label: `Offline (Terakhir aktif ${diffDays} hari lalu)`, isOnline: false };
+  };
+
+  const renderActiveSiswaTracker = (studentsToTrack: UserProfile[]) => {
+    // Process status for each student
+    const processed = studentsToTrack.map(s => {
+      const status = formatLastActive(s.lastActive);
+      return { ...s, ...status };
+    });
+
+    // Filter by search query
+    let filtered = processed.filter(s => 
+      s.name.toLowerCase().includes(activeSearch.toLowerCase()) ||
+      (s.kelas && s.kelas.toLowerCase().includes(activeSearch.toLowerCase())) ||
+      (s.tempatPkl && s.tempatPkl.toLowerCase().includes(activeSearch.toLowerCase()))
+    );
+
+    // Filter by tab
+    if (activeTabFilter === "online") {
+      filtered = filtered.filter(s => s.isOnline);
+    } else if (activeTabFilter === "offline") {
+      filtered = filtered.filter(s => !s.isOnline);
+    }
+
+    // Sort: Online first, then by lastActive recency
+    filtered.sort((a, b) => {
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      return new Date(b.lastActive || 0).getTime() - new Date(a.lastActive || 0).getTime();
+    });
+
+    const onlineCount = processed.filter(s => s.isOnline).length;
+
+    return (
+      <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              Siswa Sedang Aktif & Status Penggunaan Aplikasi (Real-Time)
+            </h4>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Pantau secara real-time siswa mana saja yang saat ini sedang aktif atau terakhir kali menggunakan aplikasi.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 flex items-center gap-1.5">
+              <Wifi className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+              {onlineCount} Siswa Online
+            </span>
+            <button
+              onClick={handleRefreshProfiles}
+              disabled={refreshing}
+              className="p-1.5 hover:bg-gray-100 text-gray-500 hover:text-gray-800 border border-gray-250/60 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center"
+              title="Perbarui Data Status"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Cari nama, kelas, atau mitra..."
+              value={activeSearch}
+              onChange={(e) => setActiveSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs border border-gray-250/70 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#1565C0] focus:border-[#1565C0] placeholder-gray-400"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTabFilter("semua")}
+              className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                activeTabFilter === "semua"
+                  ? "bg-white text-gray-800 shadow-xs"
+                  : "text-gray-500 hover:text-gray-850"
+              }`}
+            >
+              Semua ({processed.length})
+            </button>
+            <button
+              onClick={() => setActiveTabFilter("online")}
+              className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                activeTabFilter === "online"
+                  ? "bg-emerald-500 text-white shadow-xs"
+                  : "text-gray-500 hover:text-gray-850"
+              }`}
+            >
+              Online ({onlineCount})
+            </button>
+            <button
+              onClick={() => setActiveTabFilter("offline")}
+              className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                activeTabFilter === "offline"
+                  ? "bg-white text-gray-800 shadow-xs"
+                  : "text-gray-500 hover:text-gray-850"
+              }`}
+            >
+              Offline ({processed.length - onlineCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Student list container */}
+        {filtered.length === 0 ? (
+          <div className="py-10 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <Activity className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+            <p className="text-xs font-semibold text-gray-600">Tidak ada siswa yang cocok dengan filter</p>
+            <p className="text-[10px] text-gray-400 mt-1">Coba sesuaikan kata kunci pencarian atau ganti filter Anda.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map((student) => (
+              <div 
+                key={student.uid} 
+                className={`p-4 rounded-xl border transition-all flex items-start gap-3 relative overflow-hidden ${
+                  student.isOnline 
+                    ? "bg-emerald-50/20 border-emerald-100 shadow-sm" 
+                    : "bg-white border-gray-150 hover:bg-gray-50/40"
+                }`}
+              >
+                {/* Visual Accent for Online Status */}
+                {student.isOnline && (
+                  <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+                )}
+
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  {student.photoURL ? (
+                    <img 
+                      src={student.photoURL} 
+                      alt={student.name} 
+                      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${
+                      student.isOnline 
+                        ? "bg-emerald-100 text-emerald-800" 
+                        : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {student.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  {/* Presence indicator dot on top of avatar */}
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                    student.isOnline ? "bg-emerald-500" : "bg-gray-300"
+                  }`} />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-1.5 justify-between">
+                    <h5 className="font-bold text-xs text-gray-800 truncate" title={student.name}>{student.name}</h5>
+                    <span className="text-[9px] bg-gray-100 text-gray-500 font-bold px-1 rounded uppercase shrink-0">
+                      {student.kelas || "XII"}
+                    </span>
+                  </div>
+                  
+                  <p className="text-[10px] text-gray-400 truncate">
+                    📍 {student.tempatPkl || "Belum ditempatkan"}
+                  </p>
+
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                      student.isOnline 
+                        ? "bg-emerald-150 text-emerald-800" 
+                        : "bg-gray-100 text-gray-500"
+                    }`}>
+                      {student.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render Pembimbing (Supervisor) Dashboard
   const renderPembimbingDashboard = () => {
     const myStudentsList = profiles.filter((p) => {
@@ -719,6 +952,9 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Real-Time Student Active Tracking */}
+        {renderActiveSiswaTracker(myStudentsList)}
       </div>
     );
   };
@@ -1195,6 +1431,9 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Real-Time Student Active Tracking (All Students for Admin) */}
+        {renderActiveSiswaTracker(profiles.filter(p => p.role === "siswa"))}
       </div>
     );
   };

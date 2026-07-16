@@ -1043,6 +1043,39 @@ export const pklService = {
     }
   },
 
+  async updateUserLastActive(uid: string): Promise<void> {
+    if (!uid) return;
+    const nowStr = new Date().toISOString();
+    invalidateCachePrefix("profiles");
+    if (isFirebaseActive && db) {
+      try {
+        const { doc, updateDoc } = await import("firebase/firestore");
+        await updateDoc(doc(db, "profiles", uid), { lastActive: nowStr });
+      } catch (e) {
+        console.error("Failed to update lastActive in Firestore:", e);
+      }
+    } else {
+      const stored = localStorage.getItem("pkl_custom_profiles");
+      if (stored) {
+        const list: UserProfile[] = JSON.parse(stored);
+        const idx = list.findIndex(u => u.uid === uid);
+        if (idx !== -1) {
+          list[idx].lastActive = nowStr;
+          localStorage.setItem("pkl_custom_profiles", JSON.stringify(list));
+        }
+      }
+      
+      const savedUser = localStorage.getItem("pkl_current_user");
+      if (savedUser) {
+        const userObj = JSON.parse(savedUser);
+        if (userObj.uid === uid) {
+          userObj.lastActive = nowStr;
+          localStorage.setItem("pkl_current_user", JSON.stringify(userObj));
+        }
+      }
+    }
+  },
+
   async importSiswaBulk(siswaList: (Omit<UserProfile, "uid" | "role" | "createdAt"> & { password?: string })[]): Promise<UserProfile[]> {
     const imported: UserProfile[] = [];
     const settings = await this.getSchoolSettings();
