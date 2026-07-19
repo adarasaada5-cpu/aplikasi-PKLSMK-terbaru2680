@@ -1,4 +1,9 @@
 /// <reference types="vite/client" />
+/**
+ * Safe Firebase Initialization.
+ * Supports fallback to local storage if Firebase credentials are not yet configured.
+ */
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -25,21 +30,25 @@ const hasValidConfig =
   resolvedConfig &&
   resolvedConfig.apiKey &&
   resolvedConfig.apiKey.trim() !== "" &&
-  resolvedConfig.apiKey !== "MY_GEMINI_API_KEY";
+  resolvedConfig.apiKey !== "MY_GEMINI_API_KEY"; // exclude template placeholders
 
 if (hasValidConfig) {
   try {
     app = getApps().length === 0 ? initializeApp(resolvedConfig) : getApp();
     auth = getAuth(app);
-    db = getFirestore(app);
+    // Explicitly pass the firestoreDatabaseId if configured
+    db = getFirestore(app, resolvedConfig.firestoreDatabaseId || undefined);
     isFirebaseActive = true;
-    console.log("🔥 Firebase (firebase.ts) initialized successfully!");
+    console.log("🔥 Firebase initialized successfully for PKL SANJAYA BAJAWA!");
   } catch (error) {
-    console.error("⚠️ Failed to initialize Firebase in firebase.ts:", error);
+    console.error("⚠️ Failed to initialize real Firebase, using local fallback mode:", error);
   }
 } else {
-  console.info("📝 firebase.ts loaded in Preparation / Fallback mode.");
+  console.info(
+    "📝 Firebase is in PREPARATION mode. All operations will use local-first secure state engine, " +
+      "which is structurally identical to Firestore and ready for seamless database swap."
+  );
 }
 
-export { app, auth, db, isFirebaseActive };
+export { auth, db, isFirebaseActive };
 export default app;

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { UserProfile, UserRole } from "../models/types";
-import { auth, isFirebaseActive } from "../firebase/firebase";
+import { auth, isFirebaseActive } from "../firebase/config";
 import { pklService } from "../services/pklService";
 import {
   onAuthStateChanged,
