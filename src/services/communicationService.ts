@@ -1,4 +1,4 @@
-import { db, isFirebaseActive } from "../firebase/config";
+import { db, isFirebaseActive } from "../firebase/firebase";
 import {
   ChatRoom,
   ChatMessage,
