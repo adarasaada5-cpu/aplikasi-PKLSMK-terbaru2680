@@ -41,7 +41,7 @@ export const Dashboard: React.FC = () => {
   const handleRefreshProfiles = async () => {
     setRefreshing(true);
     try {
-      const uList = await pklService.getAllUserProfiles();
+      const uList = await pklService.getAllUserProfiles(true);
       setProfiles(uList);
     } catch (e) {
       console.error("Failed to refresh profiles:", e);
@@ -49,6 +49,22 @@ export const Dashboard: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  // Poll profiles every 30 seconds for real-time online status updates
+  useEffect(() => {
+    if (!user || (user.role !== "admin" && user.role !== "pembimbing")) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const uList = await pklService.getAllUserProfiles(true);
+        setProfiles(uList);
+      } catch (e) {
+        console.error("Failed to auto-poll profiles:", e);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [user?.role]);
 
   useEffect(() => {
     const fetchData = async () => {

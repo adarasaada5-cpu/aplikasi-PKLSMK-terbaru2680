@@ -86,7 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (dbProfile) {
             profile = {
               ...dbProfile,
-              uid: firebaseUser.uid,
               photoURL: firebaseUser.photoURL || dbProfile.photoURL,
             };
           } else if (localProfileStr) {
@@ -213,7 +212,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (dbProfile) {
         profile = {
           ...dbProfile,
-          uid: firebaseUser.uid,
           photoURL: firebaseUser.photoURL || dbProfile.photoURL,
         };
       } else if (localProfileStr) {
@@ -268,6 +266,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
+
+  // Background heartbeat to track user active status (online status)
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // Immediately trigger on load / login
+    pklService.updateUserLastActive(user.uid).catch(err => {
+      console.error("Error updating user lastActive:", err);
+    });
+
+    // Run every 45 seconds while user is logged in
+    const interval = setInterval(() => {
+      pklService.updateUserLastActive(user.uid).catch(err => {
+        console.error("Error updating user lastActive in interval:", err);
+      });
+    }, 45000);
+
+    return () => clearInterval(interval);
+  }, [user?.uid]);
 
   const updateProfile = async (profileData: Partial<UserProfile>): Promise<UserProfile> => {
     if (!user) throw new Error("No authenticated user");

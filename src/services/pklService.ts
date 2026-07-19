@@ -878,11 +878,13 @@ export const pklService = {
   },
 
   // --- USER PROFILES & ACCOUNTS MANAGEMENT ---
-  async getAllUserProfiles(): Promise<UserProfile[]> {
+  async getAllUserProfiles(forceRefresh = false): Promise<UserProfile[]> {
     if (isFirebaseActive && db) {
       const cacheKey = "profiles";
-      const cached = getCachedData<UserProfile[]>(cacheKey, 30000); // 30 seconds TTL
-      if (cached) return cached;
+      if (!forceRefresh) {
+        const cached = getCachedData<UserProfile[]>(cacheKey, 30000); // 30 seconds TTL
+        if (cached) return cached;
+      }
 
       const path = "profiles";
       try {
