@@ -1,21 +1,13 @@
 /// <reference types="vite/client" />
 /**
- * Safe Firebase Initialization.
- * Supports fallback to local storage if Firebase credentials are not yet configured.
+ * Firebase Configuration Loader
+ * Hanya menyiapkan konfigurasi, inisialisasi dilakukan di firebase.ts
  */
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 
-let app;
-let auth: any = null;
-let db: any = null;
-let isFirebaseActive = false;
-
 // Check if there is a valid Firebase API Key in env or fallback config
-const resolvedConfig = {
+export const resolvedConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig?.apiKey,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig?.authDomain,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig?.projectId,
@@ -26,29 +18,8 @@ const resolvedConfig = {
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfig?.firestoreDatabaseId,
 };
 
-const hasValidConfig =
+export const hasValidConfig =
   resolvedConfig &&
   resolvedConfig.apiKey &&
   resolvedConfig.apiKey.trim() !== "" &&
-  resolvedConfig.apiKey !== "MY_GEMINI_API_KEY"; // exclude template placeholders
-
-if (hasValidConfig) {
-  try {
-    app = getApps().length === 0 ? initializeApp(resolvedConfig) : getApp();
-    auth = getAuth(app);
-    // Explicitly pass the firestoreDatabaseId if configured
-    db = getFirestore(app, resolvedConfig.firestoreDatabaseId || undefined);
-    isFirebaseActive = true;
-    console.log("🔥 Firebase initialized successfully for PKL SANJAYA BAJAWA!");
-  } catch (error) {
-    console.error("⚠️ Failed to initialize real Firebase, using local fallback mode:", error);
-  }
-} else {
-  console.info(
-    "📝 Firebase is in PREPARATION mode. All operations will use local-first secure state engine, " +
-      "which is structurally identical to Firestore and ready for seamless database swap."
-  );
-}
-
-export { auth, db, isFirebaseActive };
-export default app;
+  resolvedConfig.apiKey !== "MY_GEMINI_API_KEY";
