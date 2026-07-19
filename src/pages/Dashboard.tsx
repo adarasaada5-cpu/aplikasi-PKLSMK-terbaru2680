@@ -50,18 +50,18 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Poll profiles every 30 seconds for real-time online status updates
+  // Poll profiles every 60 seconds for real-time online status updates (using cache to avoid heavy queries)
   useEffect(() => {
     if (!user || (user.role !== "admin" && user.role !== "pembimbing")) return;
 
     const interval = setInterval(async () => {
       try {
-        const uList = await pklService.getAllUserProfiles(true);
+        const uList = await pklService.getAllUserProfiles(false);
         setProfiles(uList);
       } catch (e) {
         console.error("Failed to auto-poll profiles:", e);
       }
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [user?.role]);
@@ -69,22 +69,51 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        let [jList, aList, pList, uList, nList, sSettings] = await Promise.all([
-          pklService.getJurnal(),
-          pklService.getKehadiran(),
-          pklService.getTempatPkl(),
-          pklService.getAllUserProfiles(),
-          user?.role === "admin" || user?.role === "pembimbing" ? pklService.getTeacherNotes(user.role, user.uid) : Promise.resolve([]),
-          pklService.getSchoolSettings(),
-        ]);
+        let jList: JurnalEntry[] = [];
+        let aList: KehadiranEntry[] = [];
+        let pList: TempatPkl[] = [];
+        let uList: UserProfile[] = [];
+        let nList: TeacherNote[] = [];
+        let sSettings: SchoolSettings | null = null;
+
+        if (user?.role === "siswa") {
+          // Optimization: Student only needs their own data and school info
+          const [myJournals, myAttendance, tempatPkls, schoolSettings] = await Promise.all([
+            pklService.getJurnal(user.uid),
+            pklService.getKehadiran(user.uid),
+            pklService.getTempatPkl(),
+            pklService.getSchoolSettings(),
+          ]);
+          jList = myJournals;
+          aList = myAttendance;
+          pList = tempatPkls;
+          sSettings = schoolSettings;
+          uList = []; // Students don't need all user profiles
+          nList = []; // Students don't need teacher notes
+        } else {
+          // Admin, Pembimbing, and Industri load full/filtered data
+          const [allJournals, allAttendance, tempatPkls, allProfiles, notes, schoolSettings] = await Promise.all([
+            pklService.getJurnal(),
+            pklService.getKehadiran(),
+            pklService.getTempatPkl(),
+            pklService.getAllUserProfiles(),
+            user?.role === "admin" || user?.role === "pembimbing" ? pklService.getTeacherNotes(user.role, user.uid) : Promise.resolve([]),
+            pklService.getSchoolSettings(),
+          ]);
+          jList = allJournals;
+          aList = allAttendance;
+          pList = tempatPkls;
+          uList = allProfiles;
+          nList = notes;
+          sSettings = schoolSettings;
+        }
 
         setProfiles(uList);
         setTeacherNotes(nList);
         setSchoolSettings(sSettings);
 
         if (user?.role === "siswa") {
-          jList = jList.filter((j) => j.userId === user.uid);
-          aList = aList.filter((a) => a.userId === user.uid);
+          // Already filtered at database level
         } else if (user?.role === "industri") {
           // Filter to only students assigned to this industry partner
           const myStudentIds = uList

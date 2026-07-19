@@ -1020,6 +1020,51 @@ export const pklService = {
     }
   },
 
+  async getUserProfileByEmail(email: string): Promise<UserProfile | null> {
+    if (!email) return null;
+    const targetEmail = email.toLowerCase().trim();
+
+    if (isFirebaseActive && db) {
+      try {
+        const { query, collection, where, getDocs } = await import("firebase/firestore");
+        // Try querying by lowercase/exact email
+        const q = query(collection(db, "profiles"), where("email", "==", targetEmail));
+        const querySnapshot = await getDocs(q);
+        
+        let foundProfile: UserProfile | null = null;
+        querySnapshot.forEach((docSnap) => {
+          foundProfile = { uid: docSnap.id, ...docSnap.data() } as UserProfile;
+        });
+
+        if (foundProfile) {
+          return foundProfile;
+        }
+
+        // Try original email as fallback
+        const qOriginal = query(collection(db, "profiles"), where("email", "==", email.trim()));
+        const snapOriginal = await getDocs(qOriginal);
+        snapOriginal.forEach((docSnap) => {
+          foundProfile = { uid: docSnap.id, ...docSnap.data() } as UserProfile;
+        });
+
+        if (foundProfile) {
+          return foundProfile;
+        }
+
+        // As a final fallback to guarantee we find it, use getAllUserProfiles
+        const allProfiles = await this.getAllUserProfiles();
+        return allProfiles.find(p => p.email.toLowerCase() === targetEmail) || null;
+      } catch (error) {
+        console.error("Error in getUserProfileByEmail:", error);
+        const allProfiles = await this.getAllUserProfiles();
+        return allProfiles.find(p => p.email.toLowerCase() === targetEmail) || null;
+      }
+    } else {
+      const allProfiles = await this.getAllUserProfiles();
+      return allProfiles.find(p => p.email.toLowerCase() === targetEmail) || null;
+    }
+  },
+
   async saveUserProfile(profile: UserProfile): Promise<UserProfile> {
     invalidateCachePrefix("profiles");
     if (isFirebaseActive && db) {

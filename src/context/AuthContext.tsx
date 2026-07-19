@@ -76,8 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Check database first
           let dbProfile: UserProfile | undefined;
           try {
-            const allProfiles = await pklService.getAllUserProfiles();
-            dbProfile = allProfiles.find(p => p.email.toLowerCase() === (firebaseUser.email || "").toLowerCase());
+            const found = await pklService.getUserProfileByEmail(firebaseUser.email || "");
+            dbProfile = found || undefined;
           } catch (e) {}
 
           const localProfileStr = localStorage.getItem(`profile_${firebaseUser.uid}`);
@@ -166,8 +166,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check if there is an existing database profile with this email first!
       let dbProfile: UserProfile | undefined;
       try {
-        const allProfiles = await pklService.getAllUserProfiles();
-        dbProfile = allProfiles.find(p => p.email.toLowerCase() === selectedEmail.toLowerCase());
+        const found = await pklService.getUserProfileByEmail(selectedEmail);
+        dbProfile = found || undefined;
       } catch (e) {}
 
       const seedProfile = dbProfile || SEED_USERS[selectedEmail] || {
@@ -202,8 +202,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check database first
       let dbProfile: UserProfile | undefined;
       try {
-        const allProfiles = await pklService.getAllUserProfiles();
-        dbProfile = allProfiles.find(p => p.email.toLowerCase() === (firebaseUser.email || "").toLowerCase());
+        const found = await pklService.getUserProfileByEmail(firebaseUser.email || "");
+        dbProfile = found || undefined;
       } catch (e) {}
 
       const localProfileStr = localStorage.getItem(`profile_${firebaseUser.uid}`);

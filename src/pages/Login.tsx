@@ -66,7 +66,7 @@ export const Login: React.FC = () => {
 
       // Hardcoded Admin check with specific password
       if (emailLower === "wasosergio@gmail.com") {
-        if (data.password !== "sansa0910##*##") {
+        if (data.password !== "sansa0910##*") {
           setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
           setIsSubmitting(false);
           return;
@@ -77,8 +77,7 @@ export const Login: React.FC = () => {
       }
 
       // Look up if user exists in the database/profiles
-      const allProfiles = await pklService.getAllUserProfiles();
-      const existingProfile = allProfiles.find(p => p.email.toLowerCase() === emailLower);
+      const existingProfile = await pklService.getUserProfileByEmail(emailLower);
 
       if (existingProfile) {
         // We check the password stored in Firestore!
