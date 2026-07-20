@@ -66,7 +66,7 @@ export const Login: React.FC = () => {
 
       // Hardcoded Admin check with specific password
       if (emailLower === "wasosergio@gmail.com") {
-        if (data.password !== "sansa0910##*") {
+        if (data.password !== "sansa0910##*@@#") {
           setErrorMsg("Kata sandi salah. Silakan periksa kembali.");
           setIsSubmitting(false);
           return;
@@ -341,7 +341,7 @@ export const Login: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-gray-400 font-mono text-[9px] truncate">wasosergio@gmail.com</p>
-                <p className="text-[9.5px] text-amber-700 dark:text-amber-400 mt-1 font-semibold">Sandi: sansa0910##*</p>
+                <p className="text-[9.5px] text-amber-700 dark:text-amber-400 mt-1 font-semibold">Sandi: sansa0910##*@@#</p>
               </button>
 
               {/* GURU PEMBIMBING */}
